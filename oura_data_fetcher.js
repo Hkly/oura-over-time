@@ -69,10 +69,10 @@ const fetchAndMergeData = async (start, end, token) => {
     mood: d.mood,
     average_heart_rate: d.heart_rate && Array.isArray(d.heart_rate.items) && d.heart_rate.items.length > 0
       ? (d.heart_rate.items.reduce((a, b) => a + b, 0) / d.heart_rate.items.length)
-      : null,
+      : "",
     average_heart_rate_variability: d.heart_rate_variability && Array.isArray(d.heart_rate_variability.items) && d.heart_rate_variability.items.length > 0
       ? (d.heart_rate_variability.items.reduce((a, b) => a + b, 0) / d.heart_rate_variability.items.length)
-      : null
+      : ""
   }));
 
   console.log('Fetching workout data...');
@@ -113,22 +113,51 @@ const fetchAndMergeData = async (start, end, token) => {
     }
   });
 
-  const mergedArray = Object.values(merged);
-  // Prepare CSV header: flatten session and workout arrays as JSON strings
-  const csvHeader = Object.keys(mergedArray[0]).join(',');
-  const csvRows = mergedArray.map(row =>
-    Object.values(row).map((v, idx) => {
-      const key = Object.keys(row)[idx];
-      if (key === 'sessions' || key === 'workouts') {
-        return JSON.stringify(v).replace(/"/g, '""');
+  // Ensure output directory exists
+  const outputDir = 'output';
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
+  }
+
+  // Save sessions to a separate CSV
+  if (datasets.sessions && datasets.sessions.length > 0) {
+    // Rename type 'meditation' to 'meditation session' in the output
+    const sessionHeader = Object.keys(datasets.sessions[0]).join(',');
+    const sessionRows = datasets.sessions.map(row => {
+      const values = Object.values(row);
+      const typeIdx = Object.keys(row).indexOf('type');
+      if (typeIdx !== -1 && values[typeIdx] === 'meditation') {
+        values[typeIdx] = 'meditation session';
       }
-      return Array.isArray(v) ? JSON.stringify(v) : v;
-    }).join(',')
-  );
+      return values.join(',');
+    });
+    const sessionCsv = [sessionHeader, ...sessionRows].join('\n');
+    fs.writeFileSync(`${outputDir}/oura_meditation_sessions.csv`, sessionCsv);
+    console.log('Saved: output/oura_meditation_sessions.csv');
+  }
+
+  // Save workouts to a separate CSV
+  if (datasets.workouts && datasets.workouts.length > 0) {
+    const workoutHeader = Object.keys(datasets.workouts[0]).join(',');
+    const workoutRows = datasets.workouts.map(row => Object.values(row).join(','));
+    const workoutCsv = [workoutHeader, ...workoutRows].join('\n');
+    fs.writeFileSync(`${outputDir}/oura_workouts.csv`, workoutCsv);
+    console.log('Saved: output/oura_workouts.csv');
+  }
+
+  // Remove sessions and workouts from merged data for the main CSV
+  Object.values(merged).forEach(row => {
+    delete row.sessions;
+    delete row.workouts;
+  });
+
+  const mergedArray = Object.values(merged);
+  const csvHeader = Object.keys(mergedArray[0]).join(',');
+  const csvRows = mergedArray.map(row => Object.values(row).join(','));
 
   const csvContent = [csvHeader, ...csvRows].join('\n');
-  fs.writeFileSync('oura_combined_raw.csv', csvContent);
-  console.log('Saved: oura_combined_raw.csv');
+  fs.writeFileSync(`${outputDir}/oura_combined_raw.csv`, csvContent);
+  console.log('Saved: output/oura_combined_raw.csv');
 };
 
 program
