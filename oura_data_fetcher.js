@@ -17,7 +17,7 @@ const HEADERS = {
 const fetchData = async (endpoint, start, end) => {
   const url = `${BASE_URL}/${endpoint}?start_date=${start}&end_date=${end}`;
   const response = await axios.get(url, { headers: HEADERS });
-  return response.data[endpoint];
+  return response.data.data;
 };
 
 const fetchAndMergeData = async (start, end) => {
@@ -34,6 +34,7 @@ const fetchAndMergeData = async (start, end) => {
     rem_sleep_sec: d.rem,
     deep_sleep_sec: d.deep,
     light_sleep_sec: d.light,
+    hrv_rmssd: d.rmssd,
   }));
 
   console.log('Fetching stress data...');
@@ -45,19 +46,13 @@ const fetchAndMergeData = async (start, end) => {
   }));
 
   console.log('Fetching heart rate data...');
-  const hr = await fetchData('daily_heart_rate', start, end);
+  const hr = await fetchData('heartrate', start, end);
   datasets.hr = hr.map(d => ({
-    date: d.day,
+    date: d.timestamp.split('T')[0],
     resting_hr_avg: d.resting_hr_avg,
     resting_hr_low: d.resting_hr_low,
   }));
 
-  console.log('Fetching HRV data...');
-  const hrv = await fetchData('daily_hrv', start, end);
-  datasets.hrv = hrv.map(d => ({
-    date: d.day,
-    hrv_rmssd: d.rmssd,
-  }));
 
   console.log('Fetching activity data...');
   const activity = await fetchData('daily_activity', start, end);
