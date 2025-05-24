@@ -29,28 +29,21 @@ const fetchAndMergeData = async (start, end) => {
     date: d.day,
     bedtime_start: d.bedtime_start,
     bedtime_end: d.bedtime_end,
-    sleep_latency_sec: d.sleep_latency,
-    total_sleep_sec: d.duration,
-    rem_sleep_sec: d.rem,
-    deep_sleep_sec: d.deep,
-    light_sleep_sec: d.light,
-    hrv_rmssd: d.rmssd,
+    sleep_latency_sec: d.latency, // updated key
+    total_sleep_sec: d.total_sleep_duration, // updated key
+    rem_sleep_sec: d.rem_sleep_duration, // updated key
+    deep_sleep_sec: d.deep_sleep_duration, // updated key
+    light_sleep_sec: d.light_sleep_duration, // updated key
+    average_hrv: d.average_hrv, // updated key (average HRV for the night)
+    average_heart_rate: d.average_heart_rate 
   }));
 
   console.log('Fetching stress data...');
   const stress = await fetchData('daily_stress', start, end);
   datasets.stress = stress.map(d => ({
     date: d.day,
-    stress_avg: d.stress_avg,
-    stress_high: d.stress_high,
-  }));
-
-  console.log('Fetching heart rate data...');
-  const hr = await fetchData('heartrate', start, end);
-  datasets.hr = hr.map(d => ({
-    date: d.timestamp.split('T')[0],
-    resting_hr_avg: d.resting_hr_avg,
-    resting_hr_low: d.resting_hr_low,
+    recovery_high: d.recovery_high,     // corrected
+    stress_high: d.stress_high    // corrected
   }));
 
 
@@ -59,9 +52,12 @@ const fetchAndMergeData = async (start, end) => {
   datasets.activity = activity.map(d => ({
     date: d.day,
     steps: d.steps,
-    cal_active: d.cal_active,
-    total_burn: d.cal_total,
-    movement_activities: d.movement_activities,
+    active_calories: d.active_calories,     // corrected
+    high_activity_time: d.high_activity_time,      // corrected
+    low_activity_time: d.low_activity_time,
+    medium_activity_time: d.medium_activity_time,
+    sedentary_time: d.sedentary_time,
+    total_calories: d.total_calories
   }));
 
   // Merge datasets by date
