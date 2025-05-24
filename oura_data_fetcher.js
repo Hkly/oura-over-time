@@ -58,19 +58,73 @@ const fetchAndMergeData = async (start, end, token) => {
     total_calories: d.total_calories
   }));
 
-  // Merge datasets by date
+  // Fetch and flatten session data (may be multiple per day)
+  console.log('Fetching session data...');
+  const sessions = await fetchData('session', start, end);
+  datasets.sessions = sessions.map(d => ({
+    date: d.day,
+    start_datetime: d.start_datetime,
+    end_datetime: d.end_datetime,
+    type: d.type,
+    mood: d.mood,
+    average_heart_rate: d.heart_rate && Array.isArray(d.heart_rate.items) && d.heart_rate.items.length > 0
+      ? (d.heart_rate.items.reduce((a, b) => a + b, 0) / d.heart_rate.items.length)
+      : null,
+    average_heart_rate_variability: d.heart_rate_variability && Array.isArray(d.heart_rate_variability.items) && d.heart_rate_variability.items.length > 0
+      ? (d.heart_rate_variability.items.reduce((a, b) => a + b, 0) / d.heart_rate_variability.items.length)
+      : null
+  }));
+
+  console.log('Fetching workout data...');
+  const workouts = await fetchData('workout', start, end);
+  datasets.workouts = workouts.map(d => ({
+    date: d.day,
+    activity: d.activity,
+    calories: d.calories,
+    distance: d.distance,
+    intensity: d.intensity,
+    label: d.label,
+    source: d.source,
+    start_datetime: d.start_datetime,
+    end_datetime: d.end_datetime
+  }));
+
+  // Merge datasets by date (sessions and workouts may have multiple per day)
   const merged = {};
 
-  Object.values(datasets).forEach(dataset => {
-    dataset.forEach(entry => {
-      if (!merged[entry.date]) merged[entry.date] = { date: entry.date };
-      Object.assign(merged[entry.date], entry);
-    });
+  // Merge single-entry-per-day datasets
+  ['sleep', 'stress', 'activity'].forEach(key => {
+    if (datasets[key]) {
+      datasets[key].forEach(entry => {
+        if (!merged[entry.date]) merged[entry.date] = { date: entry.date };
+        Object.assign(merged[entry.date], entry);
+      });
+    }
+  });
+
+  // For sessions and workouts, collect arrays per day
+  ['sessions', 'workouts'].forEach(key => {
+    if (datasets[key]) {
+      datasets[key].forEach(entry => {
+        if (!merged[entry.date]) merged[entry.date] = { date: entry.date };
+        if (!merged[entry.date][key]) merged[entry.date][key] = [];
+        merged[entry.date][key].push(entry);
+      });
+    }
   });
 
   const mergedArray = Object.values(merged);
+  // Prepare CSV header: flatten session and workout arrays as JSON strings
   const csvHeader = Object.keys(mergedArray[0]).join(',');
-  const csvRows = mergedArray.map(row => Object.values(row).join(','));
+  const csvRows = mergedArray.map(row =>
+    Object.values(row).map((v, idx) => {
+      const key = Object.keys(row)[idx];
+      if (key === 'sessions' || key === 'workouts') {
+        return JSON.stringify(v).replace(/"/g, '""');
+      }
+      return Array.isArray(v) ? JSON.stringify(v) : v;
+    }).join(',')
+  );
 
   const csvContent = [csvHeader, ...csvRows].join('\n');
   fs.writeFileSync('oura_combined_raw.csv', csvContent);
