@@ -3,7 +3,7 @@
 // Dependencies: axios, fs, commander
 
 const { program } = require('commander');
-const { OuraDataFetcher, COMBINED_DATA_TYPES, INDIVIDUAL_DATA_TYPES } = require('./OuraDataFetcher');
+const { OuraDataFetcher } = require('./OuraDataFetcher');
 const DataProcessor = require('./DataProcessor');
 
 /**
@@ -11,11 +11,8 @@ const DataProcessor = require('./DataProcessor');
  */
 const fetchAndMergeData = async (startDate, endDate, token) => {
   try {
-    // Create fetcher instance with token and date range
     const fetcher = new OuraDataFetcher(token, startDate, endDate);
-
-    console.log('Fetching combined data types:', COMBINED_DATA_TYPES);
-    console.log('Fetching individual data types:', INDIVIDUAL_DATA_TYPES);
+    const outputDir = DataProcessor.ensureOutputDirectory();
 
     // Fetch combined data and individual data separately
     const [combinedData, individualData] = await Promise.all([
@@ -24,17 +21,11 @@ const fetchAndMergeData = async (startDate, endDate, token) => {
     ]);
 
     // Merge combined data by date
-    const merged = DataProcessor.mergeDataByDate(combinedData);
-
-    // Ensure output directory exists
-    const outputDir = DataProcessor.ensureOutputDirectory();
-
-    // Save combined data to one CSV
-    DataProcessor.saveCombinedData(merged, outputDir);
+    const mergedCombinedData = DataProcessor.mergeDataByDate(combinedData);
+    DataProcessor.saveCombinedData(mergedCombinedData, outputDir);
 
     // Save individual data types to separate CSVs
-    DataProcessor.saveSessionsData(individualData.sessions, outputDir);
-    DataProcessor.saveWorkoutsData(individualData.workouts, outputDir);
+    DataProcessor.saveIndividualData(individualData, outputDir);
 
     console.log('\nData fetching and processing completed successfully!');
 
