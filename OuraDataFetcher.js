@@ -20,6 +20,15 @@ class OuraDataFetcher {
     this.startDate = startDate;
     this.endDate = endDate;
     this.headers = { Authorization: `Bearer ${accessToken}` };
+
+    // Method map for all data fetching methods
+    this.methodMap = {
+      sleep: this.fetchSleepData,
+      stress: this.fetchStressData,
+      activity: this.fetchActivityData,
+      sessions: this.fetchSessionData,
+      workouts: this.fetchWorkoutData
+    };
   }
 
   async fetchData(endpoint) {
@@ -109,36 +118,35 @@ class OuraDataFetcher {
     }));
   }
 
-  async fetchAllData() {
-    const [sleep, stress, activity, sessions, workouts] = await Promise.all([
-      this.fetchSleepData(),
-      this.fetchStressData(),
-      this.fetchActivityData(),
-      this.fetchSessionData(),
-      this.fetchWorkoutData()
-    ]);
-
-    return { sleep, stress, activity, sessions, workouts };
-  }
-
+  /**
+   * Fetch only the data types that get combined by date
+   */
   async fetchCombinedData() {
-    const [sleep, stress, activity] = await Promise.all([
-      this.fetchSleepData(),
-      this.fetchStressData(),
-      this.fetchActivityData()
-    ]);
+    const promises = COMBINED_DATA_TYPES.map(type => this.methodMap[type].call(this));
+    const results = await Promise.all(promises);
 
-    return { sleep, stress, activity };
+    const data = {};
+    COMBINED_DATA_TYPES.forEach((type, index) => {
+      data[type] = results[index];
+    });
+
+    return data;
   }
 
+  /**
+   * Fetch only the data types that get individual CSV files
+   */
   async fetchIndividualData() {
-    const [sessions, workouts] = await Promise.all([
-      this.fetchSessionData(),
-      this.fetchWorkoutData()
-    ]);
+    const promises = INDIVIDUAL_DATA_TYPES.map(type => this.methodMap[type].call(this));
+    const results = await Promise.all(promises);
 
-    return { sessions, workouts };
+    const data = {};
+    INDIVIDUAL_DATA_TYPES.forEach((type, index) => {
+      data[type] = results[index];
+    });
+
+    return data;
   }
 }
 
-module.exports = OuraDataFetcher;
+module.exports = { OuraDataFetcher, COMBINED_DATA_TYPES, INDIVIDUAL_DATA_TYPES };

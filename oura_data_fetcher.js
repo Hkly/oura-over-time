@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const { program } = require('commander');
-const OuraDataFetcher = require('./OuraDataFetcher');
+const { OuraDataFetcher, COMBINED_DATA_TYPES, INDIVIDUAL_DATA_TYPES } = require('./OuraDataFetcher');
 
 /**
  * Utility class for data processing and CSV operations
@@ -13,23 +13,12 @@ class DataProcessor {
   static mergeDataByDate(datasets) {
     const merged = {};
 
-    // Merge single-entry-per-day datasets
-    ['sleep', 'stress', 'activity'].forEach(key => {
+    // Merge single-entry-per-day datasets (sleep, stress, activity)
+    COMBINED_DATA_TYPES.forEach(key => {
       if (datasets[key]) {
         datasets[key].forEach(entry => {
           if (!merged[entry.date]) merged[entry.date] = { date: entry.date };
           Object.assign(merged[entry.date], entry);
-        });
-      }
-    });
-
-    // For sessions and workouts, collect arrays per day
-    ['sessions', 'workouts'].forEach(key => {
-      if (datasets[key]) {
-        datasets[key].forEach(entry => {
-          if (!merged[entry.date]) merged[entry.date] = { date: entry.date };
-          if (!merged[entry.date][key]) merged[entry.date][key] = [];
-          merged[entry.date][key].push(entry);
         });
       }
     });
@@ -81,12 +70,6 @@ class DataProcessor {
   }
 
   static saveCombinedData(merged, outputDir) {
-    // Remove sessions and workouts from merged data for the main CSV
-    Object.values(merged).forEach(row => {
-      delete row.sessions;
-      delete row.workouts;
-    });
-
     const mergedArray = Object.values(merged);
     if (mergedArray.length === 0) return;
 
@@ -102,19 +85,29 @@ const fetchAndMergeData = async (startDate, endDate, token) => {
     // Create fetcher instance with token and date range
     const fetcher = new OuraDataFetcher(token, startDate, endDate);
 
-    // Fetch all data
-    const datasets = await fetcher.fetchAllData();
+    console.log('Fetching combined data types:', COMBINED_DATA_TYPES);
+    console.log('Fetching individual data types:', INDIVIDUAL_DATA_TYPES);
 
-    // Merge data by date
-    const merged = DataProcessor.mergeDataByDate(datasets);
+    // Fetch combined data and individual data separately
+    const [combinedData, individualData] = await Promise.all([
+      fetcher.fetchCombinedData(),
+      fetcher.fetchIndividualData()
+    ]);
+
+    // Merge combined data by date
+    const merged = DataProcessor.mergeDataByDate(combinedData);
 
     // Ensure output directory exists
     const outputDir = DataProcessor.ensureOutputDirectory();
 
-    // Save data to CSV files
-    DataProcessor.saveSessionsData(datasets.sessions, outputDir);
-    DataProcessor.saveWorkoutsData(datasets.workouts, outputDir);
+    // Save combined data to one CSV
     DataProcessor.saveCombinedData(merged, outputDir);
+
+    // Save individual data types to separate CSVs
+    DataProcessor.saveSessionsData(individualData.sessions, outputDir);
+    DataProcessor.saveWorkoutsData(individualData.workouts, outputDir);
+
+    console.log('\nData fetching and processing completed successfully!');
 
   } catch (error) {
     console.error('Error fetching or processing data:', error.message);
