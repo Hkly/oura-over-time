@@ -3,7 +3,7 @@
 // Dependencies: axios, fs, commander
 
 const { program } = require('commander');
-const { OuraDataFetcher } = require('./OuraDataFetcher');
+const { OuraDataFetcher, COMBINED_DATA_TYPES, INDIVIDUAL_DATA_TYPES } = require('./OuraDataFetcher');
 const DataProcessor = require('./DataProcessor');
 
 /**
@@ -13,22 +13,15 @@ const fetchAndMergeData = async (startDate, endDate, token) => {
   try {
     const fetcher = new OuraDataFetcher(token, startDate, endDate);
     const outputDir = DataProcessor.ensureOutputDirectory();
-
-    // Fetch combined data and individual data separately
     const [combinedData, individualData] = await Promise.all([
-      fetcher.fetchCombinedData(),
-      fetcher.fetchIndividualData()
+      fetcher.fetchDataFor(COMBINED_DATA_TYPES),
+      fetcher.fetchDataFor(INDIVIDUAL_DATA_TYPES)
     ]);
 
-    // Merge combined data by date
-    const mergedCombinedData = DataProcessor.mergeDataByDate(combinedData);
-    DataProcessor.saveCombinedData(mergedCombinedData, outputDir);
-
-    // Save individual data types to separate CSVs
+    DataProcessor.saveCombinedData(combinedData, outputDir);
     DataProcessor.saveIndividualData(individualData, outputDir);
 
     console.log('\nData fetching and processing completed successfully!');
-
   } catch (error) {
     console.error('Error fetching or processing data:', error.message);
     throw error;

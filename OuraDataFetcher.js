@@ -118,30 +118,12 @@ class OuraDataFetcher {
     }));
   }
 
-  /**
-   * Fetch only the data types that get combined by date
-   */
-  async fetchCombinedData() {
-    const promises = COMBINED_DATA_TYPES.map(type => this.methodMap[type].call(this));
+  async fetchDataFor(data_types) {
+    const promises = data_types.map(type => this.methodMap[type].call(this));
     const results = await Promise.all(promises);
 
     const data = {};
-    COMBINED_DATA_TYPES.forEach((type, index) => {
-      data[type] = results[index];
-    });
-
-    return data;
-  }
-
-  /**
-   * Fetch only the data types that get individual CSV files
-   */
-  async fetchIndividualData() {
-    const promises = INDIVIDUAL_DATA_TYPES.map(type => this.methodMap[type].call(this));
-    const results = await Promise.all(promises);
-
-    const data = {};
-    INDIVIDUAL_DATA_TYPES.forEach((type, index) => {
+    data_types.forEach((type, index) => {
       data[type] = results[index];
     });
 

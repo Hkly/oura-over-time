@@ -48,7 +48,8 @@ class DataProcessor {
     console.log(`Saved: ${filename}`);
   }
 
-  static saveCombinedData(merged, outputDir) {
+  static saveCombinedData(combinedData, outputDir) {
+    const merged = this.mergeDataByDate(combinedData);
     const mergedArray = Object.values(merged);
     if (mergedArray.length === 0) return;
 
