@@ -6,13 +6,10 @@ const axios = require('axios');
 const fs = require('fs');
 const { program } = require('commander');
 
-// === USER SETUP ===
-const ACCESS_TOKEN = 'YOUR_PERSONAL_ACCESS_TOKEN_HERE'; // Replace with your Oura token
 const BASE_URL = 'https://api.ouraring.com/v2/usercollection';
 
-const HEADERS = {
-  Authorization: `Bearer ${ACCESS_TOKEN}`,
-};
+let ACCESS_TOKEN = null;
+let HEADERS = {};
 
 const fetchData = async (endpoint, start, end) => {
   const url = `${BASE_URL}/${endpoint}?start_date=${start}&end_date=${end}`;
@@ -20,7 +17,9 @@ const fetchData = async (endpoint, start, end) => {
   return response.data.data;
 };
 
-const fetchAndMergeData = async (start, end) => {
+const fetchAndMergeData = async (start, end, token) => {
+  ACCESS_TOKEN = token;
+  HEADERS = { Authorization: `Bearer ${ACCESS_TOKEN}` };
   const datasets = {};
 
   console.log('Fetching sleep data...');
@@ -80,10 +79,11 @@ const fetchAndMergeData = async (start, end) => {
 };
 
 program
+  .requiredOption('--token <token>', 'Oura API personal access token')
   .requiredOption('--start <start>', 'Start date (YYYY-MM-DD)')
   .requiredOption('--end <end>', 'End date (YYYY-MM-DD)')
   .action(async (options) => {
-    await fetchAndMergeData(options.start, options.end);
+    await fetchAndMergeData(options.start, options.end, options.token);
   });
 
 program.parse();
