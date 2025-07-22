@@ -34,7 +34,16 @@
     <button type="submit">Fetch Data</button>
   </form>
   <div class="result" id="result"></div>
+  <div style="max-width:700px;margin:auto;">
+    <h2>Stress & Meditation Comparison</h2>
+    <canvas id="stressMeditationChart"></canvas>
+  </div>
   <script>
+    // Load charts.js
+    var chartsScript = document.createElement('script');
+    chartsScript.src = 'charts.js';
+    document.head.appendChild(chartsScript);
+
     document.getElementById('ouraForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const token = document.getElementById('token').value;
@@ -51,7 +60,9 @@
         });
         const data = await res.json();
         if (data.success) {
-          resultDiv.textContent = 'Data fetched and saved to output folder!';
+          resultDiv.textContent = 'Data fetched!';
+          // Render charts using charts.js
+          window.renderStressMeditationChart(data.data, format);
         } else {
           resultDiv.textContent = 'Error: ' + data.error;
         }
