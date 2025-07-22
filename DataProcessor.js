@@ -52,7 +52,6 @@ class DataProcessor {
     const merged = this.mergeDataByDate(combinedData);
     const mergedArray = Object.values(merged);
     if (mergedArray.length === 0) return;
-
     this.saveToCsv(mergedArray, `${outputDir}/oura_combined_raw.csv`);
   }
 
@@ -61,6 +60,25 @@ class DataProcessor {
       if (individualData[type]) {
         const filename = `${outputDir}/oura_${type}.csv`;
         this.saveToCsv(individualData[type], filename);
+      }
+    });
+  }
+
+  static saveCombinedDataAsJson(combinedData, outputDir) {
+    const merged = this.mergeDataByDate(combinedData);
+    const mergedArray = Object.values(merged);
+    if (mergedArray.length === 0) return;
+    const filename = `${outputDir}/oura_combined_raw.json`;
+    fs.writeFileSync(filename, JSON.stringify(mergedArray, null, 2));
+    console.log(`Saved: ${filename}`);
+  }
+
+  static saveIndividualDataAsJson(individualData, outputDir) {
+    INDIVIDUAL_DATA_TYPES.forEach(type => {
+      if (individualData[type]) {
+        const filename = `${outputDir}/oura_${type}.json`;
+        fs.writeFileSync(filename, JSON.stringify(individualData[type], null, 2));
+        console.log(`Saved: ${filename}`);
       }
     });
   }
