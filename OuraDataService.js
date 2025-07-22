@@ -11,37 +11,16 @@ async function fetchAndSaveOuraData({ token, startDate, endDate, format = 'csv' 
     fetcher.fetchDataFor(COMBINED_DATA_TYPES),
     fetcher.fetchDataFor(INDIVIDUAL_DATA_TYPES)
   ]);
-  DataProcessor.saveCombinedData(combinedData, outputDir, format);
-  DataProcessor.saveIndividualData(individualData, outputDir, format);
+  // Always save as JSON
+  DataProcessor.saveCombinedData(combinedData, outputDir, 'json');
+  DataProcessor.saveIndividualData(individualData, outputDir, 'json');
 
-  // Prepare data for frontend
-  // Convert to CSV or JSON string as requested
+  // Prepare data for frontend (always JSON)
   let combinedOut, individualOut = {};
-  if (format === 'json') {
-    combinedOut = JSON.stringify(Object.values(DataProcessor.mergeDataByDate(combinedData)), null, 2);
-    INDIVIDUAL_DATA_TYPES.forEach(type => {
-      individualOut[type] = JSON.stringify(individualData[type] || [], null, 2);
-    });
-  } else {
-    const merged = Object.values(DataProcessor.mergeDataByDate(combinedData));
-    if (merged.length > 0) {
-      const header = Object.keys(merged[0]).join(',');
-      const rows = merged.map(row => Object.values(row).join(','));
-      combinedOut = [header, ...rows].join('\n');
-    } else {
-      combinedOut = '';
-    }
-    INDIVIDUAL_DATA_TYPES.forEach(type => {
-      const arr = individualData[type] || [];
-      if (arr.length > 0) {
-        const header = Object.keys(arr[0]).join(',');
-        const rows = arr.map(row => Object.values(row).join(','));
-        individualOut[type] = [header, ...rows].join('\n');
-      } else {
-        individualOut[type] = '';
-      }
-    });
-  }
+  combinedOut = JSON.stringify(Object.values(DataProcessor.mergeDataByDate(combinedData)), null, 2);
+  INDIVIDUAL_DATA_TYPES.forEach(type => {
+    individualOut[type] = JSON.stringify(individualData[type] || [], null, 2);
+  });
   return { combined: combinedOut, individual: individualOut };
 }
 

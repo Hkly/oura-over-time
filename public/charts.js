@@ -8,31 +8,12 @@ if (!window.Chart) {
   document.head.appendChild(script);
 }
 
-function parseCSV(csv) {
-  const lines = csv.split('\n');
-  const header = lines[0].split(',');
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const vals = lines[i].split(',');
-    if (vals.length !== header.length) continue;
-    const obj = {};
-    header.forEach((h, idx) => obj[h] = vals[idx]);
-    rows.push(obj);
-  }
-  return rows;
-}
-
 function getStressMeditationData(data) {
   // stress/recovery: from combined data
   // meditation sessions: from individual sessions
-  let combinedRows = [], sessionRows = [];
-  if (data.format === 'json') {
-    combinedRows = JSON.parse(data.combined || '[]');
-    sessionRows = JSON.parse(data.individual.sessions || '[]');
-  } else {
-    combinedRows = parseCSV(data.combined || '');
-    sessionRows = parseCSV(data.individual.sessions || '');
-  }
+  // Only handle JSON data
+  let combinedRows = JSON.parse(data.combined || '[]');
+  let sessionRows = JSON.parse(data.individual.sessions || '[]');
   // Build date map
   const dateMap = {};
   combinedRows.forEach(r => {
@@ -130,5 +111,5 @@ function renderStressMeditationChart(data, format) {
 
 // Export for use in index.html
 window.renderStressMeditationChart = renderStressMeditationChart;
-window.parseCSV = parseCSV;
+// No longer export parseCSV; only JSON is supported
 // Add more chart renderers here as needed

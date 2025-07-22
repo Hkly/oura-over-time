@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const token = document.getElementById('token').value;
     const start = document.getElementById('start').value;
     const end = document.getElementById('end').value;
-    const format = document.getElementById('format').value;
+    const format = 'json';
     const resultDiv = document.getElementById('result');
     resultDiv.textContent = 'Fetching data...';
     try {
