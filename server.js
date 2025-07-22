@@ -3,7 +3,7 @@
 
 const express = require('express');
 const path = require('path');
-const { fetchAndSaveOuraData } = require('./oura_data_service');
+const { fetchAndSaveOuraData } = require('./OuraDataService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
