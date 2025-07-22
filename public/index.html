@@ -25,6 +25,12 @@
     <label for="end">End Date:</label>
     <input type="date" id="end" name="end" required>
 
+    <label for="format">Save As:</label>
+    <select id="format" name="format" required>
+      <option value="csv">CSV</option>
+      <option value="json">JSON</option>
+    </select>
+
     <button type="submit">Fetch Data</button>
   </form>
   <div class="result" id="result"></div>
@@ -34,13 +40,14 @@
       const token = document.getElementById('token').value;
       const start = document.getElementById('start').value;
       const end = document.getElementById('end').value;
+      const format = document.getElementById('format').value;
       const resultDiv = document.getElementById('result');
       resultDiv.textContent = 'Fetching data...';
       try {
         const res = await fetch('/fetch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, start, end })
+          body: JSON.stringify({ token, start, end, format })
         });
         const data = await res.json();
         if (data.success) {

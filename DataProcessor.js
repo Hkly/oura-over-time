@@ -32,53 +32,41 @@ class DataProcessor {
     return outputDir;
   }
 
-  static saveToCsv(data, filename, transformRow = null) {
-    if (!data || data.length === 0) return;
-
-    const header = Object.keys(data[0]).join(',');
-    const rows = data.map(row => {
-      let values = Object.values(row);
-      if (transformRow) {
-        values = transformRow(row, values);
-      }
-      return values.join(',');
-    });
-    const csvContent = [header, ...rows].join('\n');
-    fs.writeFileSync(filename, csvContent);
+  static saveToFile(data, filename, format = 'csv', transformRow = null) {
+    if (!data || data.length === 0) {
+      return;
+    }
+    let content;
+    if (format === 'json') {
+      content = JSON.stringify(data, null, 2);
+    } else {
+      const header = Object.keys(data[0]).join(',');
+      const rows = data.map(row => {
+        let values = Object.values(row);
+        if (transformRow) {
+          values = transformRow(row, values);
+        }
+        return values.join(',');
+      });
+      content = [header, ...rows].join('\n');
+    }
+    fs.writeFileSync(filename, content);
     console.log(`Saved: ${filename}`);
   }
 
-  static saveCombinedData(combinedData, outputDir) {
+  static saveCombinedData(combinedData, outputDir, format = 'csv') {
     const merged = this.mergeDataByDate(combinedData);
     const mergedArray = Object.values(merged);
     if (mergedArray.length === 0) return;
-    this.saveToCsv(mergedArray, `${outputDir}/oura_combined_raw.csv`);
+    const filename = `${outputDir}/oura_combined_raw.${format}`;
+    this.saveToFile(mergedArray, filename, format);
   }
 
-  static saveIndividualData(individualData, outputDir) {
+  static saveIndividualData(individualData, outputDir, format = 'csv') {
     INDIVIDUAL_DATA_TYPES.forEach(type => {
       if (individualData[type]) {
-        const filename = `${outputDir}/oura_${type}.csv`;
-        this.saveToCsv(individualData[type], filename);
-      }
-    });
-  }
-
-  static saveCombinedDataAsJson(combinedData, outputDir) {
-    const merged = this.mergeDataByDate(combinedData);
-    const mergedArray = Object.values(merged);
-    if (mergedArray.length === 0) return;
-    const filename = `${outputDir}/oura_combined_raw.json`;
-    fs.writeFileSync(filename, JSON.stringify(mergedArray, null, 2));
-    console.log(`Saved: ${filename}`);
-  }
-
-  static saveIndividualDataAsJson(individualData, outputDir) {
-    INDIVIDUAL_DATA_TYPES.forEach(type => {
-      if (individualData[type]) {
-        const filename = `${outputDir}/oura_${type}.json`;
-        fs.writeFileSync(filename, JSON.stringify(individualData[type], null, 2));
-        console.log(`Saved: ${filename}`);
+        const filename = `${outputDir}/oura_${type}.${format}`;
+        this.saveToFile(individualData[type], filename, format);
       }
     });
   }

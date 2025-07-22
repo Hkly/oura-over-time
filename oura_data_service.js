@@ -11,13 +11,8 @@ async function fetchAndSaveOuraData({ token, startDate, endDate, format = 'csv' 
     fetcher.fetchDataFor(COMBINED_DATA_TYPES),
     fetcher.fetchDataFor(INDIVIDUAL_DATA_TYPES)
   ]);
-  if (format === 'json') {
-    DataProcessor.saveCombinedDataAsJson(combinedData, outputDir);
-    DataProcessor.saveIndividualDataAsJson(individualData, outputDir);
-  } else {
-    DataProcessor.saveCombinedData(combinedData, outputDir);
-    DataProcessor.saveIndividualData(individualData, outputDir);
-  }
+  DataProcessor.saveCombinedData(combinedData, outputDir, format);
+  DataProcessor.saveIndividualData(individualData, outputDir, format);
 }
 
 module.exports = { fetchAndSaveOuraData };

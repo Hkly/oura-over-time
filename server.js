@@ -12,14 +12,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 app.post('/fetch', async (req, res) => {
-  const { token, start, end } = req.body;
-  if (!token || !start || !end) {
+  const { token, start, end, format } = req.body;
+  if (!token || !start || !end || !format) {
     return res.json({ success: false, error: 'Missing required fields.' });
   }
   try {
-    await fetchAndSaveOuraData({ token, startDate: start, endDate: end });
+    await fetchAndSaveOuraData({ token, startDate: start, endDate: end, format });
     res.json({ success: true });
   } catch (error) {
+    console.error('[ERROR] fetchAndSaveOuraData:', error);
     res.json({ success: false, error: error.message });
   }
 });
