@@ -1,6 +1,7 @@
+
 # Oura Data Fetcher
 
-This is a personal project for pulling Oura data I'm interested in via the Oura API v2 and save it as a CSV file.
+This project pulls your Oura data (sleep, stress, activity, sessions, workouts) via the Oura API v2 and saves it as CSV or JSON files.
 
 ## Prerequisites
 - Node.js (v14 or newer recommended)
@@ -9,26 +10,40 @@ This is a personal project for pulling Oura data I'm interested in via the Oura 
 ## Setup
 1. Install dependencies:
    ```sh
-   npm install axios commander
+   npm install axios express
    ```
 
 2. Get your personal access token from [Oura](https://cloud.ouraring.com/personal-access-tokens)
 
+
 ## Usage
-Run the script with the required options:
 
-```sh
-node oura_data_fetcher.js --token <YOUR_OURA_TOKEN> --start <YYYY-MM-DD> --end <YYYY-MM-DD>
-```
+### Web Interface
+Use the simple web form:
 
-- `--token` : Your Oura API personal access token
-- `--start` : Start date (format: YYYY-MM-DD)
-- `--end`   : End date (format: YYYY-MM-DD)
-
-Example:
-```sh
-node oura_data_fetcher.js --token abcdef123456 --start 2025-05-01 --end 2025-05-10
-```
+1. Start the server:
+   ```sh
+   node server.js
+   ```
+2. Open [http://localhost:3000](http://localhost:3000) in your browser.
+3. Enter your token, start date, end date, and choose CSV or JSON output.
+4. Submit the form to fetch and save your data.
 
 ## Output
-- The script will generate a file named `oura_combined_raw.csv` in the current directory containing the merged data for the specified date range.
+- Files are saved in the `output/` directory:
+  - `oura_combined_raw.csv` or `oura_combined_raw.json`: Merged sleep, stress, and activity data by date
+  - `oura_sessions.csv` or `oura_sessions.json`: Session data
+  - `oura_workouts.csv` or `oura_workouts.json`: Workout data
+
+## Code Structure
+- `OuraDataFetcher.js`: Handles API requests and data fetching
+- `DataProcessor.js`: Merges, transforms, and saves data as CSV/JSON
+- `oura_data_service.js`: Orchestrates fetching and saving
+- `server.js`: Express server for the web interface
+- `public/index.html`: Web form for user input
+
+## Extending
+- Easily add new data types or output formats by updating constants and processor logic.
+
+## License
+MIT
