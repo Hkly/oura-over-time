@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oura Data Fetcher</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    form { max-width: 400px; margin: auto; }
+    label { display: block; margin-top: 1em; }
+    input[type="text"], input[type="date"] { width: 100%; padding: 0.5em; margin-top: 0.2em; }
+    button { margin-top: 1.5em; padding: 0.7em 1.5em; }
+    .result { margin-top: 2em; }
+  </style>
+</head>
+<body>
+  <h1>Oura Data Fetcher</h1>
+  <form id="ouraForm">
+    <label for="token">Oura API Token:</label>
+    <input type="text" id="token" name="token" required>
+
+    <label for="start">Start Date:</label>
+    <input type="date" id="start" name="start" required>
+
+    <label for="end">End Date:</label>
+    <input type="date" id="end" name="end" required>
+
+    <button type="submit">Fetch Data</button>
+  </form>
+  <div class="result" id="result"></div>
+  <script>
+    document.getElementById('ouraForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const token = document.getElementById('token').value;
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = 'Fetching data...';
+      try {
+        const res = await fetch('/fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, start, end })
+        });
+        const data = await res.json();
+        if (data.success) {
+          resultDiv.textContent = 'Data fetched and saved to output folder!';
+        } else {
+          resultDiv.textContent = 'Error: ' + data.error;
+        }
+      } catch (err) {
+        resultDiv.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
