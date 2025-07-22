@@ -17,8 +17,8 @@ app.post('/fetch', async (req, res) => {
     return res.json({ success: false, error: 'Missing required fields.' });
   }
   try {
-    await fetchAndSaveOuraData({ token, startDate: start, endDate: end, format });
-    res.json({ success: true });
+    const data = await fetchAndSaveOuraData({ token, startDate: start, endDate: end, format });
+    res.json({ success: true, data });
   } catch (error) {
     console.error('[ERROR] fetchAndSaveOuraData:', error);
     res.json({ success: false, error: error.message });
