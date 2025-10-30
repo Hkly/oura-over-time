@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Dashboard - Oura Over Time</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Health Dashboard</h1>
+            <p class="subtitle">Tracking your wellness journey over time</p>
+        </header>
+
+        <main>
+            <section class="graph-section">
+                <div class="graph-header">
+                    <h2>💤 Sleep</h2>
+                    <p class="graph-description">Daily sleep quality tracking</p>
+                </div>
+                <div id="sleep-graph" class="contribution-graph"></div>
+            </section>
+
+            <section class="graph-section">
+                <div class="graph-header">
+                    <h2>🏃 Activity</h2>
+                    <p class="graph-description">Physical activity and exercise</p>
+                </div>
+                <div id="activity-graph" class="contribution-graph"></div>
+            </section>
+
+            <section class="graph-section">
+                <div class="graph-header">
+                    <h2>🧘 Meditation</h2>
+                    <p class="graph-description">Mindfulness and meditation practice</p>
+                </div>
+                <div id="meditation-graph" class="contribution-graph"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Data visualization inspired by GitHub contribution graphs</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
