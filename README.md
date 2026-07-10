@@ -1,51 +1,42 @@
 
 # Oura Data Fetcher
 
-This is a vibe coding project where I'm trying to learn how to utilize AI with minimal hands on changes.
+Local Node.js app for pulling Oura API v2 data (sleep, stress, activity, sessions, workouts), saving raw exports, and previewing a stress/meditation chart in the browser.
 
-This project pulls your Oura data (sleep, stress, activity, sessions, workouts) via the Oura API v2 and saves it as JSON files.
+## Requirements
+- Node.js 18+
+- npm
+- Oura personal access token: <https://cloud.ouraring.com/personal-access-tokens>
 
-## Prerequisites
-- Node.js (v14 or newer recommended)
-- An Oura API v2 personal access token
-
-## Setup
+## Development setup
 1. Install dependencies:
    ```sh
-   npm install axios express
+   npm install
    ```
-
-2. Get your personal access token from [Oura](https://cloud.ouraring.com/personal-access-tokens)
-
-
-## Usage
-
-### Web Interface
-Use the simple web form:
-
-1. Start the server:
+2. Start the app:
    ```sh
-   node server.js
+   npm run dev
    ```
-2. Open [http://localhost:3000](http://localhost:3000) in your browser.
-3. Enter your token, start date, end date, and choose CSV or JSON output.
-4. Submit the form to fetch and save your data.
+3. Open <http://localhost:3000>.
+4. Enter your token and date range, then submit.
 
-## Output
-- Files are saved in the `output/` directory:
-  - `oura_combined_raw.csv` or `oura_combined_raw.json`: Merged sleep, stress, and activity data by date
-  - `oura_sessions.csv` or `oura_sessions.json`: Session data
-  - `oura_workouts.csv` or `oura_workouts.json`: Workout data
+## Runtime behavior
+- The UI posts to `POST /fetch`.
+- Data is currently exported as JSON (the `format` field is accepted but JSON is what is written).
+- Output files are written to `output/`:
+  - `oura_combined_raw.json` (sleep + stress + activity merged by date)
+  - `oura_sessions.json`
+  - `oura_workouts.json`
 
-## Code Structure
-- `OuraDataFetcher.js`: Handles API requests and data fetching
-- `DataProcessor.js`: Merges, transforms, and saves data as CSV/JSON
-- `oura_data_service.js`: Orchestrates fetching and saving
-- `server.js`: Express server for the web interface
-- `public/index.html`: Web form for user input
+## Project structure
+- `server.js` — Express server + `/fetch` endpoint
+- `OuraDataService.js` — fetch orchestration and save flow
+- `OuraDataFetcher.js` — Oura API client and endpoint mappers
+- `DataProcessor.js` — merge + file write utilities
+- `public/index.html` — form UI
+- `public/main.js` — frontend request handling
+- `public/charts.js` — chart rendering logic
 
-## Extending
-- Easily add new data types or output formats by updating constants and processor logic.
-
-## License
-MIT
+## Notes
+- The Oura token is entered in the browser form and sent to the local server for each request.
+- `output/` and `node_modules/` are gitignored.
