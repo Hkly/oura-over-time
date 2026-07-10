@@ -32,23 +32,54 @@ class OuraDataFetcher {
     };
   }
 
+  async fetchAllPages(endpoint, params) {
+    const allRows = [];
+    const seenTokens = new Set();
+    let nextToken = null;
+
+    while (true) {
+      const pageParams = { ...params };
+      if (nextToken) {
+        pageParams.next_token = nextToken;
+      }
+
+      const response = await axios.get(`${BASE_URL}/${endpoint}`, {
+        headers: this.headers,
+        params: pageParams
+      });
+
+      const pageRows = Array.isArray(response.data?.data) ? response.data.data : [];
+      allRows.push(...pageRows);
+
+      const returnedToken = response.data?.next_token || null;
+      if (!returnedToken || seenTokens.has(returnedToken)) {
+        break;
+      }
+
+      seenTokens.add(returnedToken);
+      nextToken = returnedToken;
+    }
+
+    return allRows;
+  }
+
   async fetchDataByDate(endpoint) {
-    const url = `${BASE_URL}/${endpoint}?start_date=${this.startDate}&end_date=${this.endDate}`;
     try {
-      const response = await axios.get(url, { headers: this.headers });
-      return response.data.data;
+      return await this.fetchAllPages(endpoint, {
+        start_date: this.startDate,
+        end_date: this.endDate
+      });
     } catch (error) {
       throw new Error(this.formatApiError(endpoint, error));
     }
   }
 
   async fetchDataByDateTime(endpoint) {
-    const startDateTime = `${this.startDate}T00:00:00Z`;
-    const endDateTime = `${this.endDate}T23:59:59Z`;
-    const url = `${BASE_URL}/${endpoint}?start_datetime=${startDateTime}&end_datetime=${endDateTime}`;
     try {
-      const response = await axios.get(url, { headers: this.headers });
-      return response.data.data;
+      return await this.fetchAllPages(endpoint, {
+        start_datetime: `${this.startDate}T00:00:00Z`,
+        end_datetime: `${this.endDate}T23:59:59Z`
+      });
     } catch (error) {
       throw new Error(this.formatApiError(endpoint, error));
     }
