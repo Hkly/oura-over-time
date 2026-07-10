@@ -33,13 +33,16 @@ class DataProcessor {
   }
 
   static saveToFile(data, filename, format = 'csv', transformRow = null) {
-    if (!data || data.length === 0) {
+    if (!data) {
       return;
     }
     let content;
     if (format === 'json') {
       content = JSON.stringify(data, null, 2);
     } else {
+      if (data.length === 0) {
+        return;
+      }
       const header = Object.keys(data[0]).join(',');
       const rows = data.map(row => {
         let values = Object.values(row);
@@ -57,7 +60,7 @@ class DataProcessor {
   static saveCombinedData(combinedData, outputDir, format = 'csv') {
     const merged = this.mergeDataByDate(combinedData);
     const mergedArray = Object.values(merged);
-    if (mergedArray.length === 0) return;
+    if (mergedArray.length === 0 && format !== 'json') return;
     const filename = `${outputDir}/oura_combined_raw.${format}`;
     this.saveToFile(mergedArray, filename, format);
   }

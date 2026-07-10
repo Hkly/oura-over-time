@@ -9,7 +9,7 @@ const BASE_URL = 'https://api.ouraring.com/v2/usercollection';
 const COMBINED_DATA_TYPES = ['sleep', 'stress', 'activity'];
 
 // Data types that get their own separate CSV files
-const INDIVIDUAL_DATA_TYPES = ['sessions', 'workouts'];
+const INDIVIDUAL_DATA_TYPES = ['sessions', 'workouts', 'heartrate'];
 
 /**
  * Class to handle Oura data fetching operations
@@ -27,14 +27,43 @@ class OuraDataFetcher {
       stress: this.fetchStressData,
       activity: this.fetchActivityData,
       sessions: this.fetchSessionData,
-      workouts: this.fetchWorkoutData
+      workouts: this.fetchWorkoutData,
+      heartrate: this.fetchHeartRateData
     };
   }
 
-  async fetchData(endpoint) {
+  async fetchDataByDate(endpoint) {
     const url = `${BASE_URL}/${endpoint}?start_date=${this.startDate}&end_date=${this.endDate}`;
-    const response = await axios.get(url, { headers: this.headers });
-    return response.data.data;
+    try {
+      const response = await axios.get(url, { headers: this.headers });
+      return response.data.data;
+    } catch (error) {
+      throw new Error(this.formatApiError(endpoint, error));
+    }
+  }
+
+  async fetchDataByDateTime(endpoint) {
+    const startDateTime = `${this.startDate}T00:00:00Z`;
+    const endDateTime = `${this.endDate}T23:59:59Z`;
+    const url = `${BASE_URL}/${endpoint}?start_datetime=${startDateTime}&end_datetime=${endDateTime}`;
+    try {
+      const response = await axios.get(url, { headers: this.headers });
+      return response.data.data;
+    } catch (error) {
+      throw new Error(this.formatApiError(endpoint, error));
+    }
+  }
+
+  formatApiError(endpoint, error) {
+    const status = error?.response?.status;
+    const errorBody = error?.response?.data;
+    if (!status) {
+      return `Oura API request failed for ${endpoint}: ${error.message}`;
+    }
+    const bodyText = typeof errorBody === 'string'
+      ? errorBody
+      : JSON.stringify(errorBody);
+    return `Oura API request failed for ${endpoint} (${status}): ${bodyText}`;
   }
 
   calculateAverage(items) {
@@ -44,7 +73,7 @@ class OuraDataFetcher {
 
   async fetchSleepData() {
     console.log('Fetching sleep data...');
-    const sleep = await this.fetchData('sleep');
+    const sleep = await this.fetchDataByDate('sleep');
     return sleep.map(d => ({
       date: d.day,
       bedtime_start: d.bedtime_start,
@@ -55,13 +84,16 @@ class OuraDataFetcher {
       deep_sleep_sec: d.deep_sleep_duration,
       light_sleep_sec: d.light_sleep_duration,
       average_hrv: d.average_hrv,
-      average_heart_rate: d.average_heart_rate
+      average_heart_rate: d.average_heart_rate,
+      lowest_heart_rate: d.lowest_heart_rate,
+      heart_rate_samples: d.heart_rate || null,
+      hrv_samples: d.hrv || null
     }));
   }
 
   async fetchStressData() {
     console.log('Fetching stress data...');
-    const stress = await this.fetchData('daily_stress');
+    const stress = await this.fetchDataByDate('daily_stress');
     return stress.map(d => ({
       date: d.day,
       recovery_high: d.recovery_high,
@@ -71,7 +103,7 @@ class OuraDataFetcher {
 
   async fetchActivityData() {
     console.log('Fetching activity data...');
-    const activity = await this.fetchData('daily_activity');
+    const activity = await this.fetchDataByDate('daily_activity');
     return activity.map(d => ({
       date: d.day,
       steps: d.steps,
@@ -86,7 +118,7 @@ class OuraDataFetcher {
 
   async fetchSessionData() {
     console.log('Fetching session data...');
-    const sessions = await this.fetchData('session');
+    const sessions = await this.fetchDataByDate('session');
     return sessions.map(d => ({
       date: d.day,
       start_datetime: d.start_datetime,
@@ -98,13 +130,15 @@ class OuraDataFetcher {
         : "",
       average_heart_rate_variability: d.heart_rate_variability && d.heart_rate_variability.items
         ? this.calculateAverage(d.heart_rate_variability.items)
-        : ""
+        : "",
+      heart_rate_samples: d.heart_rate || null,
+      heart_rate_variability_samples: d.heart_rate_variability || null
     }));
   }
 
   async fetchWorkoutData() {
     console.log('Fetching workout data...');
-    const workouts = await this.fetchData('workout');
+    const workouts = await this.fetchDataByDate('workout');
     return workouts.map(d => ({
       date: d.day,
       activity: d.activity,
@@ -115,6 +149,17 @@ class OuraDataFetcher {
       source: d.source,
       start_datetime: d.start_datetime,
       end_datetime: d.end_datetime
+    }));
+  }
+
+  async fetchHeartRateData() {
+    console.log('Fetching heartrate data...');
+    const heartrate = await this.fetchDataByDateTime('heartrate');
+    return heartrate.map(d => ({
+      timestamp: d.timestamp,
+      timestamp_unix: d.timestamp_unix,
+      bpm: d.bpm,
+      source: d.source
     }));
   }
 
