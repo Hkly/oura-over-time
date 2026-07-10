@@ -1,7 +1,9 @@
 
 # Oura Data Fetcher
 
-This project pulls your Oura data (sleep, stress, activity, sessions, workouts) via the Oura API v2 and saves it as CSV or JSON files.
+This is a vibe coding project where I'm trying to learn how to utilize AI with minimal hands on changes.
+
+This project pulls your Oura data (sleep, stress, activity, sessions, workouts) via the Oura API v2 and saves it as JSON files.
 
 ## Prerequisites
 - Node.js (v14 or newer recommended)
