@@ -15,10 +15,11 @@
 </head>
 <body>
   <h1>Oura Data Fetcher</h1>
+  <div style="max-width: 400px; margin: 0 auto 1em;">
+    <button id="authorizeBtn" type="button">Authorize Oura</button>
+    <p id="authStatus" style="margin-top: 0.75em; color: #555;"></p>
+  </div>
   <form id="ouraForm">
-    <label for="token">Oura API Token:</label>
-    <input type="text" id="token" name="token" required>
-
     <label for="start">Start Date:</label>
     <input type="date" id="start" name="start" required>
 

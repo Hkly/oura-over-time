@@ -4,8 +4,8 @@
 const { OuraDataFetcher, COMBINED_DATA_TYPES, INDIVIDUAL_DATA_TYPES } = require('./OuraDataFetcher');
 const DataProcessor = require('./DataProcessor');
 
-async function fetchAndSaveOuraData({ token, startDate, endDate, format = 'csv' }) {
-  const fetcher = new OuraDataFetcher(token, startDate, endDate);
+async function fetchAndSaveOuraData({ accessToken, startDate, endDate, format = 'csv' }) {
+  const fetcher = new OuraDataFetcher(accessToken, startDate, endDate);
   const outputDir = DataProcessor.ensureOutputDirectory();
   const [combinedData, individualData] = await Promise.all([
     fetcher.fetchDataFor(COMBINED_DATA_TYPES),
