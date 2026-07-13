@@ -95,10 +95,60 @@ function toContributionLevels(valueMap, dates, options = {}) {
   });
 }
 
+function toStressRecoveryBalanceLevels(stressRecoveryByDate, dates) {
+  const balances = dates
+    .map(date => stressRecoveryByDate[date]?.balance)
+    .filter(value => typeof value === 'number' && !Number.isNaN(value))
+    .sort((a, b) => a - b);
+
+  if (balances.length === 0) {
+    return dates.map(date => ({ date, level: 0, value: 0, stress: null, recovery: null, balance: null, bucket: null }));
+  }
+
+  const recoveryMagnitudes = balances
+    .filter(value => value > 0)
+    .map(value => Math.abs(value))
+    .sort((a, b) => a - b);
+  const stressMagnitudes = balances
+    .filter(value => value < 0)
+    .map(value => Math.abs(value))
+    .sort((a, b) => a - b);
+
+  const recoveryMedian = recoveryMagnitudes.length > 0
+    ? recoveryMagnitudes[Math.floor((recoveryMagnitudes.length - 1) * 0.5)]
+    : 0;
+  const stressMedian = stressMagnitudes.length > 0
+    ? stressMagnitudes[Math.floor((stressMagnitudes.length - 1) * 0.5)]
+    : 0;
+
+  return dates.map(date => {
+    const entry = stressRecoveryByDate[date];
+    if (!entry) {
+      return { date, level: 0, value: 0, stress: null, recovery: null, balance: null, bucket: null };
+    }
+
+    const balance = entry.balance;
+    if (balance === 0) {
+      return { date, level: 2, value: balance, stress: entry.stress, recovery: entry.recovery, balance, bucket: 0 };
+    }
+
+    if (balance > 0) {
+      const magnitude = Math.abs(balance);
+      const bucket = magnitude <= recoveryMedian ? 1 : 2;
+      return { date, level: bucket === 2 ? 1 : 2, value: balance, stress: entry.stress, recovery: entry.recovery, balance, bucket };
+    }
+
+    const magnitude = Math.abs(balance);
+    const bucket = magnitude <= stressMedian ? -1 : -2;
+    return { date, level: bucket === -2 ? 4 : 3, value: balance, stress: entry.stress, recovery: entry.recovery, balance, bucket };
+  });
+}
+
 function buildMetricMaps(combinedRows, sessionRows) {
   const sleepSecondsByDate = {};
   const stepsByDate = {};
   const meditationMinutesByDate = {};
+  const stressRecoveryByDate = {};
   const workoutMinutesByDate = {};
   const workoutTypeCountsByDate = {};
 
@@ -108,6 +158,18 @@ function buildMetricMaps(combinedRows, sessionRows) {
     stepsByDate[row.date] = Number(row.steps || 0);
     if (meditationMinutesByDate[row.date] === undefined) {
       meditationMinutesByDate[row.date] = 0;
+    }
+
+    const hasStress = row.stress_high !== null && row.stress_high !== undefined && row.stress_high !== '';
+    const hasRecovery = row.recovery_high !== null && row.recovery_high !== undefined && row.recovery_high !== '';
+    if (hasStress || hasRecovery) {
+      const stress = Number(row.stress_high || 0);
+      const recovery = Number(row.recovery_high || 0);
+      stressRecoveryByDate[row.date] = {
+        stress,
+        recovery,
+        balance: recovery - stress
+      };
     }
   });
 
@@ -125,6 +187,7 @@ function buildMetricMaps(combinedRows, sessionRows) {
     sleepSecondsByDate,
     stepsByDate,
     meditationMinutesByDate,
+    stressRecoveryByDate,
     workoutMinutesByDate,
     workoutTypeCountsByDate
   };
@@ -199,6 +262,18 @@ function formatSleepSeconds(value) {
 
 function formatInteger(value) {
   return new Intl.NumberFormat().format(Number(value || 0));
+}
+
+function formatSecondsAsDuration(value) {
+  const seconds = Number(value || 0);
+  const totalMinutes = Math.round(Math.abs(seconds) / 60);
+  const sign = seconds < 0 ? '-' : '';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) {
+    return `${sign}${new Intl.NumberFormat().format(minutes)}m`;
+  }
+  return `${sign}${new Intl.NumberFormat().format(hours)}h ${minutes}m`;
 }
 
 function extractClockMinutes(timestamp) {
@@ -474,7 +549,15 @@ function renderSleepTimeDensityClocks(combinedRows) {
   `;
 }
 
-function createContributionGraph(containerId, titlePrefix, metricData, valueFormatter, tooltipTextBuilder = null) {
+function createContributionGraph(
+  containerId,
+  titlePrefix,
+  metricData,
+  valueFormatter,
+  tooltipTextBuilder = null,
+  cellColorBuilder = null,
+  legendOptions = null
+) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
@@ -537,6 +620,12 @@ function createContributionGraph(containerId, titlePrefix, metricData, valueForm
         cell.style.visibility = 'hidden';
       } else {
         cell.classList.add(`level-${day.level}`);
+        if (cellColorBuilder) {
+          const dynamicColor = cellColorBuilder(day);
+          if (dynamicColor) {
+            cell.style.backgroundColor = dynamicColor;
+          }
+        }
         const formattedValue = valueFormatter(day.value);
         const tooltipText = tooltipTextBuilder
           ? tooltipTextBuilder(day, formattedValue)
@@ -582,15 +671,32 @@ function createContributionGraph(containerId, titlePrefix, metricData, valueForm
 
   const legend = document.createElement('div');
   legend.className = 'legend';
-  legend.innerHTML = `
-    <span class="legend-label">Less</span>
-    <div class="legend-cell level-0"></div>
-    <div class="legend-cell level-1"></div>
-    <div class="legend-cell level-2"></div>
-    <div class="legend-cell level-3"></div>
-    <div class="legend-cell level-4"></div>
-    <span class="legend-label">More</span>
-  `;
+  const startLabelText = legendOptions?.startLabel || 'Less';
+  const endLabelText = legendOptions?.endLabel || 'More';
+  const legendColors = Array.isArray(legendOptions?.colors) && legendOptions.colors.length === 5
+    ? legendOptions.colors
+    : null;
+
+  const startLabel = document.createElement('span');
+  startLabel.className = 'legend-label';
+  startLabel.textContent = startLabelText;
+  legend.appendChild(startLabel);
+
+  for (let i = 0; i < 5; i += 1) {
+    const cell = document.createElement('div');
+    cell.className = 'legend-cell';
+    if (legendColors) {
+      cell.style.backgroundColor = legendColors[i];
+    } else {
+      cell.classList.add(`level-${i}`);
+    }
+    legend.appendChild(cell);
+  }
+
+  const endLabel = document.createElement('span');
+  endLabel.className = 'legend-label';
+  endLabel.textContent = endLabelText;
+  legend.appendChild(endLabel);
   graphContainer.appendChild(legend);
 
   container.appendChild(graphContainer);
@@ -724,9 +830,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const sleepContainer = document.getElementById('sleep-graph');
     const activityContainer = document.getElementById('activity-graph');
+    const stressRecoveryContainer = document.getElementById('stress-recovery-graph');
     const meditationContainer = document.getElementById('meditation-graph');
     const workoutContainer = document.getElementById('workout-graph');
-    if (sleepContainer && activityContainer && meditationContainer && workoutContainer) {
+    if (sleepContainer && activityContainer && stressRecoveryContainer && meditationContainer && workoutContainer) {
       const dates = getDateRange(start, end);
       const maps = buildMetricMaps(filteredCombinedRows, filteredSessionRows);
       addWorkoutMetrics(filteredWorkoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
@@ -742,6 +849,36 @@ document.addEventListener('DOMContentLoaded', function() {
         'Steps:',
         toContributionLevels(maps.stepsByDate, dates, { mode: 'quantile' }),
         formatInteger
+      );
+      createContributionGraph(
+        'stress-recovery-graph',
+        'Stress/Recovery balance:',
+        toStressRecoveryBalanceLevels(maps.stressRecoveryByDate, dates),
+        formatSecondsAsDuration,
+        function(day) {
+          if (day.stress === null || day.recovery === null) {
+            return `${day.date}: No stress/recovery data`;
+          }
+          const direction = day.balance > 0
+            ? 'Recovery-leaning'
+            : day.balance < 0
+              ? 'Stress-leaning'
+              : 'Balanced';
+          return `${day.date}: Stress ${formatSecondsAsDuration(day.stress)} | Recovery ${formatSecondsAsDuration(day.recovery)} (${direction})`;
+        },
+        function(day) {
+          if (day.bucket === null) return null;
+          if (day.bucket === 0) return 'rgb(245, 245, 245)';
+          if (day.bucket === 1) return 'hsl(192, 72%, 66%)';
+          if (day.bucket === 2) return 'hsl(192, 72%, 44%)';
+          if (day.bucket === -1) return 'hsl(330, 78%, 72%)';
+          return 'hsl(330, 78%, 56%)';
+        },
+        {
+          startLabel: 'More recovery',
+          endLabel: 'More stress',
+          colors: ['hsl(192, 72%, 44%)', 'hsl(192, 72%, 66%)', 'rgb(245, 245, 245)', 'hsl(330, 78%, 72%)', 'hsl(330, 78%, 56%)']
+        }
       );
       createContributionGraph(
         'meditation-graph',

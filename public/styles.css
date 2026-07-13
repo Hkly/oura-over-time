@@ -250,6 +250,12 @@ button:hover {
 #meditation-graph .level-3 { background-color: #9a67b5; }
 #meditation-graph .level-4 { background-color: #6b3a8c; }
 
+#stress-recovery-graph .level-0 { background-color: #ebedf0; }
+#stress-recovery-graph .level-1 { background-color: hsl(192, 72%, 44%); }
+#stress-recovery-graph .level-2 { background-color: hsl(192, 72%, 66%); }
+#stress-recovery-graph .level-3 { background-color: hsl(18, 85%, 66%); }
+#stress-recovery-graph .level-4 { background-color: hsl(18, 85%, 44%); }
+
 .sub-graph-description {
   margin: 12px 0 8px;
 }
