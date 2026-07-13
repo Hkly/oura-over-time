@@ -1,6 +1,6 @@
-# Oura Data Fetcher
+# Oura Over Time
 
-Local Node.js app for pulling Oura API v2 data (sleep, stress, activity, sessions, workouts), saving raw exports, and previewing a stress/meditation chart in the browser.
+Local Node.js app for pulling Oura API v2 data (sleep, stress, activity, sessions, workouts), and visualizing them over time.
 
 ## Requirements
 - Node.js 18+
