@@ -93,7 +93,20 @@ class OuraDataFetcher {
   async fetchSleepData() {
     console.log('Fetching sleep data...');
     const sleep = await this.fetchDataByDate('sleep');
-    return sleep.map(d => ({
+    const longestSleepByDay = {};
+
+    sleep.forEach(entry => {
+      const day = entry.day;
+      if (!day) return;
+      const current = longestSleepByDay[day];
+      const currentDuration = Number(current?.total_sleep_duration || 0);
+      const nextDuration = Number(entry.total_sleep_duration || 0);
+      if (!current || nextDuration > currentDuration) {
+        longestSleepByDay[day] = entry;
+      }
+    });
+
+    return Object.values(longestSleepByDay).map(d => ({
       date: d.day,
       bedtime_start: d.bedtime_start,
       bedtime_end: d.bedtime_end,
