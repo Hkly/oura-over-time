@@ -37,43 +37,66 @@
         <p class="result" id="result"></p>
       </section>
 
-      <section class="graph-section">
-        <div class="graph-header">
-          <h2>💤 Sleep</h2>
-          <p class="graph-description">Daily total sleep duration</p>
-        </div>
-        <div id="sleep-graph" class="contribution-graph"></div>
-        <div class="secondary-visual sleep-density-clocks">
-          <p class="graph-description sub-graph-description">Sleep timing density (bedtime in blue, wake time in orange)</p>
-          <div class="clock-grid">
-            <div class="clock-card clock-card-wide">
-              <h3>Sleep timing clock</h3>
-              <canvas id="sleep-timing-clock" class="clock-heatmap" width="320" height="320"></canvas>
-              <div id="sleep-timing-summary" class="clock-summary"></div>
+      <section class="dashboard-section dashboard-section--sleep">
+        <header class="dashboard-section__header">
+          <h2 class="dashboard-section__title">💤 Sleep</h2>
+          <p class="dashboard-section__description">Sleep duration and timing patterns</p>
+        </header>
+        <div class="dashboard-section__content">
+          <article class="metric-panel">
+            <h3 class="metric-panel__title">Sleep duration</h3>
+            <p class="metric-panel__description">Daily total sleep duration</p>
+            <div id="sleep-graph" class="contribution-graph"></div>
+          </article>
+          <article class="metric-panel secondary-visual sleep-density-clocks">
+            <h3 class="metric-panel__title">Sleep timing clock</h3>
+            <p class="metric-panel__description">Sleep timing density (bedtime in blue, wake time in orange)</p>
+            <div class="clock-grid">
+              <div class="clock-card clock-card-wide">
+                <canvas id="sleep-timing-clock" class="clock-heatmap" width="320" height="320"></canvas>
+                <div id="sleep-timing-summary" class="clock-summary"></div>
+              </div>
             </div>
-          </div>
+          </article>
         </div>
       </section>
 
-      <section class="graph-section">
-        <div class="graph-header">
-          <h2>🏃 Activity</h2>
-          <p class="graph-description">Daily step count</p>
+      <section class="dashboard-section dashboard-section--activity">
+        <header class="dashboard-section__header">
+          <h2 class="dashboard-section__title">🏃 Activity</h2>
+          <p class="dashboard-section__description">Movement and workout volume over time</p>
+        </header>
+        <div class="dashboard-section__content">
+          <article class="metric-panel">
+            <h3 class="metric-panel__title">Steps</h3>
+            <p class="metric-panel__description">Daily step count</p>
+            <div id="activity-graph" class="contribution-graph"></div>
+          </article>
+          <article class="metric-panel">
+            <h3 class="metric-panel__title">Workouts</h3>
+            <p class="metric-panel__description">Workout minutes</p>
+            <div id="workout-graph" class="contribution-graph"></div>
+          </article>
         </div>
-        <div id="activity-graph" class="contribution-graph"></div>
-        <p class="graph-description sub-graph-description">Workout minutes</p>
-        <div id="workout-graph" class="contribution-graph"></div>
       </section>
 
-      <section class="graph-section">
-        <div class="graph-header">
-          <h2>🧘 Stress, Recovery & Meditation</h2>
-          <p class="graph-description">Daily balance view + meditation minutes</p>
+      <section class="dashboard-section dashboard-section--balance">
+        <header class="dashboard-section__header">
+          <h2 class="dashboard-section__title">🧠 Stress, Recovery & Mindfulness</h2>
+          <p class="dashboard-section__description">Daily balance and restorative practices</p>
+        </header>
+        <div class="dashboard-section__content">
+          <article class="metric-panel">
+            <h3 class="metric-panel__title">Stress vs recovery</h3>
+            <p class="metric-panel__description">Balance in minutes (warm = stress-leaning, cool = recovery-leaning)</p>
+            <div id="stress-recovery-graph" class="contribution-graph"></div>
+          </article>
+          <article class="metric-panel">
+            <h3 class="metric-panel__title">Meditation</h3>
+            <p class="metric-panel__description">Meditation minutes from session data</p>
+            <div id="meditation-graph" class="contribution-graph"></div>
+          </article>
         </div>
-        <p class="graph-description sub-graph-description">Stress vs recovery balance in minutes (warm = stress-leaning, cool = recovery-leaning)</p>
-        <div id="stress-recovery-graph" class="contribution-graph"></div>
-        <p class="graph-description sub-graph-description">Meditation minutes from session data</p>
-        <div id="meditation-graph" class="contribution-graph"></div>
       </section>
     </main>
 

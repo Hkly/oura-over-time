@@ -21,14 +21,14 @@ body {
   overflow: hidden;
 }
 
-header {
+.container > header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 40px 30px;
   text-align: center;
 }
 
-header h1 {
+.container > header h1 {
   font-size: 2.5em;
   margin-bottom: 10px;
   font-weight: 700;
@@ -123,31 +123,55 @@ button:hover {
   font-size: 0.95em;
 }
 
-.graph-section {
+.dashboard-section {
   margin-bottom: 50px;
 }
 
-.graph-section:last-child {
+.dashboard-section:last-child {
   margin-bottom: 20px;
 }
 
-.graph-header {
+.dashboard-section__header {
   margin-bottom: 20px;
 }
 
-.graph-header h2 {
+.dashboard-section__title {
   font-size: 1.8em;
   margin-bottom: 8px;
   color: #2d3748;
 }
 
-.graph-description {
+.dashboard-section__description {
   color: #718096;
   font-size: 1em;
 }
 
-.contribution-graph {
+.dashboard-section__content {
+  display: grid;
+  gap: 14px;
+}
+
+.metric-panel {
   background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.metric-panel__title {
+  color: #2d3748;
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.metric-panel__description {
+  color: #718096;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.contribution-graph {
+  background: #ffffff;
   padding: 20px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
@@ -256,10 +280,6 @@ button:hover {
 #stress-recovery-graph .level-3 { background-color: hsl(18, 85%, 66%); }
 #stress-recovery-graph .level-4 { background-color: hsl(18, 85%, 44%); }
 
-.sub-graph-description {
-  margin: 12px 0 8px;
-}
-
 .legend {
   display: flex;
   align-items: center;
@@ -299,10 +319,7 @@ button:hover {
 }
 
 .clock-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px;
+  padding: 4px;
   text-align: center;
 }
 
@@ -377,7 +394,7 @@ footer {
     padding: 30px 20px;
   }
 
-  .graph-header h2 {
+  .dashboard-section__title {
     font-size: 1.5em;
   }
 
