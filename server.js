@@ -4,6 +4,7 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 const { fetchAndSaveOuraData } = require('./OuraDataService');
 
 const app = express();
@@ -35,8 +36,37 @@ function requireOAuthConfiguration() {
   return { clientId, clientSecret, redirectUri };
 }
 
+function readJsonFileIfExists(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  return fs.readFileSync(filePath, 'utf8');
+}
+
 app.get('/auth/status', (req, res) => {
   res.json({ authorized: Boolean(getConfiguredAccessToken()) });
+});
+
+app.get('/data/latest', (req, res) => {
+  const outputDir = path.join(__dirname, 'output');
+  const combined = readJsonFileIfExists(path.join(outputDir, 'oura_combined_raw.json'));
+  const sessions = readJsonFileIfExists(path.join(outputDir, 'oura_sessions.json'));
+  const workouts = readJsonFileIfExists(path.join(outputDir, 'oura_workouts.json'));
+
+  if (!combined || !sessions || !workouts) {
+    return res.json({ success: false, error: 'No saved dataset found yet.' });
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      combined,
+      individual: {
+        sessions,
+        workouts
+      }
+    }
+  });
 });
 
 app.get('/auth/start', (req, res) => {

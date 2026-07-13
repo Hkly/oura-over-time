@@ -10,6 +10,15 @@ function getDateRange(startDateStr, endDateStr) {
   return days;
 }
 
+function getDateRangeFromRows(rows) {
+  const dates = rows
+    .map(row => row.date)
+    .filter(Boolean)
+    .sort();
+  if (dates.length === 0) return null;
+  return { start: dates[0], end: dates[dates.length - 1] };
+}
+
 function toContributionLevels(valueMap, dates) {
   const values = dates.map(date => Number(valueMap[date] || 0));
   const max = Math.max(0, ...values);
@@ -246,6 +255,66 @@ document.addEventListener('DOMContentLoaded', function() {
 
   refreshAuthStatus();
 
+  function renderFetchedData(data, requestedStart, requestedEnd, format = 'json') {
+    const combinedRows = JSON.parse(data.combined || '[]');
+    const sessionRows = JSON.parse(data.individual.sessions || '[]');
+    const chartCanvas = document.getElementById('stressMeditationChart');
+    if (chartCanvas && window.renderStressMeditationChart) {
+      window.renderStressMeditationChart(data, format);
+    }
+
+    const sleepContainer = document.getElementById('sleep-graph');
+    const activityContainer = document.getElementById('activity-graph');
+    const meditationContainer = document.getElementById('meditation-graph');
+    if (sleepContainer && activityContainer && meditationContainer) {
+      let start = requestedStart;
+      let end = requestedEnd;
+      if (!start || !end) {
+        const inferredRange = getDateRangeFromRows(combinedRows);
+        if (!inferredRange) return;
+        start = inferredRange.start;
+        end = inferredRange.end;
+      }
+
+      const dates = getDateRange(start, end);
+      const maps = buildMetricMaps(combinedRows, sessionRows);
+      createContributionGraph(
+        'sleep-graph',
+        'Sleep:',
+        toContributionLevels(maps.sleepSecondsByDate, dates),
+        formatSleepSeconds
+      );
+      createContributionGraph(
+        'activity-graph',
+        'Steps:',
+        toContributionLevels(maps.stepsByDate, dates),
+        formatInteger
+      );
+      createContributionGraph(
+        'meditation-graph',
+        'Meditation minutes:',
+        toContributionLevels(maps.meditationMinutesByDate, dates),
+        formatInteger
+      );
+    }
+  }
+
+  async function loadLatestSavedData() {
+    try {
+      const res = await fetch('/data/latest');
+      const payload = await res.json();
+      if (!payload.success || !payload.data) return;
+      renderFetchedData(payload.data, null, null, 'json');
+      if (!resultDiv.textContent) {
+        resultDiv.textContent = 'Loaded saved data from previous fetch.';
+      }
+    } catch (error) {
+      // ignore load failures; user can still fetch fresh data
+    }
+  }
+
+  loadLatestSavedData();
+
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
     const start = document.getElementById('start').value;
@@ -269,39 +338,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       resultDiv.textContent = 'Data fetched!';
-
-      const combinedRows = JSON.parse(payload.data.combined || '[]');
-      const sessionRows = JSON.parse(payload.data.individual.sessions || '[]');
-      const chartCanvas = document.getElementById('stressMeditationChart');
-      if (chartCanvas && window.renderStressMeditationChart) {
-        window.renderStressMeditationChart(payload.data, format);
-      }
-
-      const sleepContainer = document.getElementById('sleep-graph');
-      const activityContainer = document.getElementById('activity-graph');
-      const meditationContainer = document.getElementById('meditation-graph');
-      if (sleepContainer && activityContainer && meditationContainer) {
-        const dates = getDateRange(start, end);
-        const maps = buildMetricMaps(combinedRows, sessionRows);
-        createContributionGraph(
-          'sleep-graph',
-          'Sleep seconds:',
-          toContributionLevels(maps.sleepSecondsByDate, dates),
-          formatSleepSeconds
-        );
-        createContributionGraph(
-          'activity-graph',
-          'Steps:',
-          toContributionLevels(maps.stepsByDate, dates),
-          formatInteger
-        );
-        createContributionGraph(
-          'meditation-graph',
-          'Meditation minutes:',
-          toContributionLevels(maps.meditationMinutesByDate, dates),
-          formatInteger
-        );
-      }
+      renderFetchedData(payload.data, start, end, format);
     } catch (error) {
       resultDiv.textContent = `Error: ${error.message}`;
     }
