@@ -24,10 +24,30 @@ function getLocalDateString(date = new Date()) {
   return local.toISOString().slice(0, 10);
 }
 
+function formatRangeKey(start, end) {
+  return `${start}__${end}`;
+}
+
 function getLastSixMonthsRange() {
   const end = new Date();
   const start = new Date(end);
   start.setMonth(start.getMonth() - 6);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10)
+  };
+}
+
+function getPresetRange(preset) {
+  const end = new Date();
+  const start = new Date(end);
+  if (preset === '3m') {
+    start.setMonth(start.getMonth() - 3);
+  } else if (preset === '6m') {
+    start.setMonth(start.getMonth() - 6);
+  } else if (preset === '1y') {
+    start.setFullYear(start.getFullYear() - 1);
+  }
   return {
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10)
@@ -302,6 +322,7 @@ function getCacheKey() {
 function saveDailyCache(start, end, data) {
   const payload = {
     cacheDate: getLocalDateString(),
+    rangeKey: formatRangeKey(start, end),
     start,
     end,
     data
@@ -327,21 +348,36 @@ function loadDailyCache() {
   }
 }
 
+function loadDailyCacheForRange(start, end) {
+  const cached = loadDailyCache();
+  if (!cached) return null;
+  if (cached.start > start || cached.end < end) return null;
+  return cached;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const authStatusEl = document.getElementById('authStatus');
   const resultDiv = document.getElementById('result');
   const authorizeBtn = document.getElementById('authorizeBtn');
   const form = document.getElementById('ouraForm');
+  const rangeButtons = Array.from(document.querySelectorAll('.range-button'));
   const startInput = document.getElementById('start');
   const endInput = document.getElementById('end');
   const defaultRange = getLastSixMonthsRange();
   startInput.value = defaultRange.start;
   endInput.value = defaultRange.end;
+  setActiveRangeButton('6m');
 
   function setAuthStatus(isAuthorized) {
     authStatusEl.textContent = isAuthorized
       ? 'Authorized: ready to fetch data.'
       : 'Not authorized: click "Authorize Oura" or set OURA_ACCESS_TOKEN on the server.';
+  }
+
+  function setActiveRangeButton(preset) {
+    rangeButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.range === preset);
+    });
   }
 
   async function refreshAuthStatus() {
@@ -432,24 +468,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function loadCachedData() {
-    const cached = loadDailyCache();
+  function loadCachedDataForCurrentRange() {
+    const start = startInput.value;
+    const end = endInput.value;
+    const cached = loadDailyCacheForRange(start, end);
     if (!cached) return false;
 
-    if (cached.start) startInput.value = cached.start;
-    if (cached.end) endInput.value = cached.end;
-    renderFetchedData(cached.data, cached.start, cached.end, 'json');
+    renderFetchedData(cached.data, start, end, 'json');
     if (!resultDiv.textContent) {
       resultDiv.textContent = 'Loaded saved data from today.';
     }
     return true;
   }
 
-  async function autoFetchLastSixMonths() {
-    const start = startInput.value || defaultRange.start;
-    const end = endInput.value || defaultRange.end;
+  async function loadOrFetchRange(start, end) {
+    startInput.value = start;
+    endInput.value = end;
+
+    const cached = loadDailyCacheForRange(start, end);
+    if (cached) {
+      resultDiv.textContent = 'Loaded saved data from today.';
+      renderFetchedData(cached.data, start, end, 'json');
+      return true;
+    }
+
     try {
-      resultDiv.textContent = 'Loading last 6 months...';
+      resultDiv.textContent = 'Loading data...';
       const res = await fetch('/fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -460,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDiv.textContent = `Error: ${payload.error}`;
         return false;
       }
-      resultDiv.textContent = 'Loaded last 6 months.';
+      resultDiv.textContent = 'Loaded data.';
       renderFetchedData(payload.data, start, end, 'json');
       saveDailyCache(start, end, payload.data);
       return true;
@@ -471,40 +515,26 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   (async function initializePage() {
-    const savedDataLoaded = loadCachedData();
+    const savedDataLoaded = loadCachedDataForCurrentRange();
     const authorized = await refreshAuthStatus();
     if (!savedDataLoaded && authorized) {
-      await autoFetchLastSixMonths();
+      await loadOrFetchRange(defaultRange.start, defaultRange.end);
     }
   })();
+
+  rangeButtons.forEach(button => {
+    button.addEventListener('click', async function() {
+      const presetRange = getPresetRange(button.dataset.range);
+      setActiveRangeButton(button.dataset.range);
+      await loadOrFetchRange(presetRange.start, presetRange.end);
+    });
+  });
 
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
     const start = document.getElementById('start').value;
     const end = document.getElementById('end').value;
-    const format = 'json';
-    resultDiv.textContent = 'Fetching data...';
-
-    try {
-      const res = await fetch('/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ start, end, format })
-      });
-      const payload = await res.json();
-      if (!payload.success) {
-        resultDiv.textContent = `Error: ${payload.error}`;
-        if (String(payload.error).includes('Auth is not configured')) {
-          await refreshAuthStatus();
-        }
-        return;
-      }
-
-      resultDiv.textContent = 'Data fetched!';
-      renderFetchedData(payload.data, start, end, format);
-      saveDailyCache(start, end, payload.data);
-    } catch (error) {
-      resultDiv.textContent = `Error: ${error.message}`;
-    }
+    setActiveRangeButton(null);
+    await loadOrFetchRange(start, end);
   });
 });

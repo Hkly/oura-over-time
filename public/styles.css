@@ -69,6 +69,22 @@ main {
   margin-bottom: 10px;
 }
 
+.range-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+
+.range-button {
+  font-weight: 600;
+}
+
+.range-button.active {
+  background: #5a67d8;
+  border-color: #5a67d8;
+}
+
 .controls-form {
   display: flex;
   align-items: flex-end;

@@ -42,7 +42,9 @@ This app supports two server-side auth options:
 - Main dashboard is at `/` with contribution-style heatmaps for sleep (duration), activity (steps + workout minutes), and meditation.
 - Stress/meditation comparison chart is now on `/stress.html`.
 - Both pages post to `POST /fetch`.
+- Quick range buttons on the dashboard load the last 3 months, 6 months, or year.
 - On page load, the UI loads same-day cached data from `localStorage` when available.
+- Range buttons reuse any cached dataset that covers the requested timeframe.
 - If no same-day cache exists and auth is already configured, the UI auto-fetches the last 6 months on first load.
 - Data is currently exported as JSON (the `format` field is accepted but JSON is what is written).
 - Output files are written to `output/`:
