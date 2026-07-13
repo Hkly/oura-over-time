@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Health Dashboard - Oura Data Fetcher</title>
+  <title>Stress & Meditation - Oura Data Fetcher</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Health Dashboard</h1>
-      <p class="subtitle">Tracking your wellness journey over time</p>
+      <h1>Stress & Meditation</h1>
+      <p class="subtitle">Secondary visualization page</p>
       <nav class="top-nav">
-        <a class="nav-link" href="/stress.html">Stress & Meditation Chart</a>
+        <a class="nav-link" href="/">Back to Dashboard</a>
       </nav>
     </header>
 
@@ -32,28 +32,9 @@
         <p class="result" id="result"></p>
       </section>
 
-      <section class="graph-section">
-        <div class="graph-header">
-          <h2>💤 Sleep</h2>
-          <p class="graph-description">Daily total sleep duration</p>
-        </div>
-        <div id="sleep-graph" class="contribution-graph"></div>
-      </section>
-
-      <section class="graph-section">
-        <div class="graph-header">
-          <h2>🏃 Activity</h2>
-          <p class="graph-description">Daily step count</p>
-        </div>
-        <div id="activity-graph" class="contribution-graph"></div>
-      </section>
-
-      <section class="graph-section">
-        <div class="graph-header">
-          <h2>🧘 Meditation</h2>
-          <p class="graph-description">Meditation minutes from session data</p>
-        </div>
-        <div id="meditation-graph" class="contribution-graph"></div>
+      <section class="secondary-visual">
+        <h2>Stress & Meditation Comparison</h2>
+        <canvas id="stressMeditationChart"></canvas>
       </section>
     </main>
 
@@ -61,6 +42,7 @@
       <p>Data visualization inspired by GitHub contribution graphs</p>
     </footer>
   </div>
+  <script src="charts.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

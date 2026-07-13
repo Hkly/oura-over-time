@@ -39,7 +39,9 @@ This app supports two server-side auth options:
 4. If needed, click **Authorize Oura**, then enter your date range and submit.
 
 ## Runtime behavior
-- The UI posts to `POST /fetch`.
+- Main dashboard is at `/` with contribution-style heatmaps for sleep, activity, and meditation.
+- Stress/meditation comparison chart is now on `/stress.html`.
+- Both pages post to `POST /fetch`.
 - Data is currently exported as JSON (the `format` field is accepted but JSON is what is written).
 - Output files are written to `output/`:
   - `oura_combined_raw.json` (sleep + stress + activity merged by date)
@@ -52,7 +54,9 @@ This app supports two server-side auth options:
 - `OuraDataFetcher.js` — Oura API client and endpoint mappers
 - `DataProcessor.js` — merge + file write utilities
 - `public/index.html` — form UI
+- `public/stress.html` — secondary stress/meditation chart page
 - `public/main.js` — frontend request handling
+- `public/styles.css` — shared dashboard/page styling
 - `public/charts.js` — chart rendering logic
 
 ## Notes
