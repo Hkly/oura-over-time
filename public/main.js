@@ -19,8 +19,27 @@ function getDateRangeFromRows(rows) {
   return { start: dates[0], end: dates[dates.length - 1] };
 }
 
-function toContributionLevels(valueMap, dates) {
+function toContributionLevels(valueMap, dates, options = {}) {
   const values = dates.map(date => Number(valueMap[date] || 0));
+  const nonZeroValues = values.filter(v => v > 0);
+  if (options.mode === 'quantile' && nonZeroValues.length > 0) {
+    const sorted = [...nonZeroValues].sort((a, b) => a - b);
+    const q1 = sorted[Math.floor((sorted.length - 1) * 0.25)];
+    const q2 = sorted[Math.floor((sorted.length - 1) * 0.5)];
+    const q3 = sorted[Math.floor((sorted.length - 1) * 0.75)];
+    return dates.map(date => {
+      const value = Number(valueMap[date] || 0);
+      let level = 0;
+      if (value > 0) {
+        if (value <= q1) level = 1;
+        else if (value <= q2) level = 2;
+        else if (value <= q3) level = 3;
+        else level = 4;
+      }
+      return { date, level, value };
+    });
+  }
+
   const max = Math.max(0, ...values);
   if (max === 0) {
     return dates.map(date => ({ date, level: 0, value: 0 }));
@@ -281,19 +300,19 @@ document.addEventListener('DOMContentLoaded', function() {
       createContributionGraph(
         'sleep-graph',
         'Sleep:',
-        toContributionLevels(maps.sleepSecondsByDate, dates),
+        toContributionLevels(maps.sleepSecondsByDate, dates, { mode: 'quantile' }),
         formatSleepSeconds
       );
       createContributionGraph(
         'activity-graph',
         'Steps:',
-        toContributionLevels(maps.stepsByDate, dates),
+        toContributionLevels(maps.stepsByDate, dates, { mode: 'quantile' }),
         formatInteger
       );
       createContributionGraph(
         'meditation-graph',
         'Meditation minutes:',
-        toContributionLevels(maps.meditationMinutesByDate, dates),
+        toContributionLevels(maps.meditationMinutesByDate, dates, { mode: 'quantile' }),
         formatInteger
       );
     }
