@@ -19,6 +19,21 @@ function getDateRangeFromRows(rows) {
   return { start: dates[0], end: dates[dates.length - 1] };
 }
 
+function getLocalDateString(date = new Date()) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function getLastSixMonthsRange() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - 6);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10)
+  };
+}
+
 function toContributionLevels(valueMap, dates, options = {}) {
   const values = dates.map(date => Number(valueMap[date] || 0));
   const nonZeroValues = values.filter(v => v > 0);
@@ -280,11 +295,48 @@ function createContributionGraph(containerId, titlePrefix, metricData, valueForm
   container.appendChild(graphContainer);
 }
 
+function getCacheKey() {
+  return 'oura-dashboard-daily-cache';
+}
+
+function saveDailyCache(start, end, data) {
+  const payload = {
+    cacheDate: getLocalDateString(),
+    start,
+    end,
+    data
+  };
+  localStorage.setItem(getCacheKey(), JSON.stringify(payload));
+}
+
+function loadDailyCache() {
+  const raw = localStorage.getItem(getCacheKey());
+  if (!raw) return null;
+
+  try {
+    const payload = JSON.parse(raw);
+    if (payload?.cacheDate !== getLocalDateString()) {
+      localStorage.removeItem(getCacheKey());
+      return null;
+    }
+    if (!payload?.data) return null;
+    return payload;
+  } catch (error) {
+    localStorage.removeItem(getCacheKey());
+    return null;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const authStatusEl = document.getElementById('authStatus');
   const resultDiv = document.getElementById('result');
   const authorizeBtn = document.getElementById('authorizeBtn');
   const form = document.getElementById('ouraForm');
+  const startInput = document.getElementById('start');
+  const endInput = document.getElementById('end');
+  const defaultRange = getLastSixMonthsRange();
+  startInput.value = defaultRange.start;
+  endInput.value = defaultRange.end;
 
   function setAuthStatus(isAuthorized) {
     authStatusEl.textContent = isAuthorized
@@ -296,9 +348,12 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res = await fetch('/auth/status');
       const payload = await res.json();
-      setAuthStatus(Boolean(payload.authorized));
+      const authorized = Boolean(payload.authorized);
+      setAuthStatus(authorized);
+      return authorized;
     } catch (error) {
       authStatusEl.textContent = 'Unable to check auth status.';
+      return false;
     }
   }
 
@@ -377,21 +432,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  async function loadLatestSavedData() {
+  function loadCachedData() {
+    const cached = loadDailyCache();
+    if (!cached) return false;
+
+    if (cached.start) startInput.value = cached.start;
+    if (cached.end) endInput.value = cached.end;
+    renderFetchedData(cached.data, cached.start, cached.end, 'json');
+    if (!resultDiv.textContent) {
+      resultDiv.textContent = 'Loaded saved data from today.';
+    }
+    return true;
+  }
+
+  async function autoFetchLastSixMonths() {
+    const start = startInput.value || defaultRange.start;
+    const end = endInput.value || defaultRange.end;
     try {
-      const res = await fetch('/data/latest');
+      resultDiv.textContent = 'Loading last 6 months...';
+      const res = await fetch('/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start, end, format: 'json' })
+      });
       const payload = await res.json();
-      if (!payload.success || !payload.data) return;
-      renderFetchedData(payload.data, null, null, 'json');
-      if (!resultDiv.textContent) {
-        resultDiv.textContent = 'Loaded saved data from previous fetch.';
+      if (!payload.success) {
+        resultDiv.textContent = `Error: ${payload.error}`;
+        return false;
       }
+      resultDiv.textContent = 'Loaded last 6 months.';
+      renderFetchedData(payload.data, start, end, 'json');
+      saveDailyCache(start, end, payload.data);
+      return true;
     } catch (error) {
-      // ignore load failures; user can still fetch fresh data
+      resultDiv.textContent = `Error: ${error.message}`;
+      return false;
     }
   }
 
-  loadLatestSavedData();
+  (async function initializePage() {
+    const savedDataLoaded = loadCachedData();
+    const authorized = await refreshAuthStatus();
+    if (!savedDataLoaded && authorized) {
+      await autoFetchLastSixMonths();
+    }
+  })();
 
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -417,6 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       resultDiv.textContent = 'Data fetched!';
       renderFetchedData(payload.data, start, end, format);
+      saveDailyCache(start, end, payload.data);
     } catch (error) {
       resultDiv.textContent = `Error: ${error.message}`;
     }

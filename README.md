@@ -39,10 +39,11 @@ This app supports two server-side auth options:
 4. If needed, click **Authorize Oura**, then enter your date range and submit.
 
 ## Runtime behavior
-- Main dashboard is at `/` with contribution-style heatmaps for sleep, activity (steps + workout minutes), and meditation.
+- Main dashboard is at `/` with contribution-style heatmaps for sleep (duration), activity (steps + workout minutes), and meditation.
 - Stress/meditation comparison chart is now on `/stress.html`.
 - Both pages post to `POST /fetch`.
-- On page load, the UI attempts to load and render the most recently saved data from `output/` (via `GET /data/latest`).
+- On page load, the UI loads same-day cached data from `localStorage` when available.
+- If no same-day cache exists and auth is already configured, the UI auto-fetches the last 6 months on first load.
 - Data is currently exported as JSON (the `format` field is accepted but JSON is what is written).
 - Output files are written to `output/`:
   - `oura_combined_raw.json` (sleep + stress + activity merged by date)
