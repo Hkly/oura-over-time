@@ -62,12 +62,34 @@ class OuraDataFetcher {
     return allRows;
   }
 
+  addDays(dateStr, days) {
+    const date = new Date(`${dateStr}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  }
+
+  extractEntryDate(entry) {
+    if (!entry || typeof entry !== 'object') return null;
+    const rawDate = entry.day || entry.date || null;
+    if (typeof rawDate !== 'string') return null;
+    return rawDate.length >= 10 ? rawDate.slice(0, 10) : null;
+  }
+
+  filterRowsToRequestedDateRange(rows) {
+    return rows.filter(entry => {
+      const entryDate = this.extractEntryDate(entry);
+      if (!entryDate) return true;
+      return entryDate >= this.startDate && entryDate <= this.endDate;
+    });
+  }
+
   async fetchDataByDate(endpoint) {
     try {
-      return await this.fetchAllPages(endpoint, {
+      const rows = await this.fetchAllPages(endpoint, {
         start_date: this.startDate,
-        end_date: this.endDate
+        end_date: this.addDays(this.endDate, 1)
       });
+      return this.filterRowsToRequestedDateRange(rows);
     } catch (error) {
       throw new Error(this.formatApiError(endpoint, error));
     }
