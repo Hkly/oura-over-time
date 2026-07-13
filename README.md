@@ -39,7 +39,7 @@ This app supports two server-side auth options:
 4. If needed, click **Authorize Oura**, then enter your date range and submit.
 
 ## Runtime behavior
-- Main dashboard is at `/` with contribution-style heatmaps for sleep, activity, and meditation.
+- Main dashboard is at `/` with contribution-style heatmaps for sleep, activity (steps + workout minutes), and meditation.
 - Stress/meditation comparison chart is now on `/stress.html`.
 - Both pages post to `POST /fetch`.
 - On page load, the UI attempts to load and render the most recently saved data from `output/` (via `GET /data/latest`).

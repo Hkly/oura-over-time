@@ -56,6 +56,8 @@ function buildMetricMaps(combinedRows, sessionRows) {
   const sleepSecondsByDate = {};
   const stepsByDate = {};
   const meditationMinutesByDate = {};
+  const workoutMinutesByDate = {};
+  const workoutTypeCountsByDate = {};
 
   combinedRows.forEach(row => {
     if (!row.date) return;
@@ -76,7 +78,49 @@ function buildMetricMaps(combinedRows, sessionRows) {
     meditationMinutesByDate[date] = Number(meditationMinutesByDate[date] || 0) + durationMinutes;
   });
 
-  return { sleepSecondsByDate, stepsByDate, meditationMinutesByDate };
+  return {
+    sleepSecondsByDate,
+    stepsByDate,
+    meditationMinutesByDate,
+    workoutMinutesByDate,
+    workoutTypeCountsByDate
+  };
+}
+
+function addWorkoutMetrics(workoutRows, workoutMinutesByDate, workoutTypeCountsByDate) {
+  workoutRows.forEach(row => {
+    const date = row.date;
+    if (!date) return;
+
+    const start = row.start_datetime ? new Date(row.start_datetime) : null;
+    const end = row.end_datetime ? new Date(row.end_datetime) : null;
+    let durationMinutes = 0;
+    if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      durationMinutes = Math.max(0, Math.round((end - start) / 60000));
+    }
+    workoutMinutesByDate[date] = Number(workoutMinutesByDate[date] || 0) + durationMinutes;
+
+    const workoutTypeRaw = String(row.label || row.activity || 'workout').trim().toLowerCase();
+    if (!workoutTypeRaw) return;
+    if (!workoutTypeCountsByDate[date]) {
+      workoutTypeCountsByDate[date] = {};
+    }
+    workoutTypeCountsByDate[date][workoutTypeRaw] =
+      Number(workoutTypeCountsByDate[date][workoutTypeRaw] || 0) + 1;
+  });
+}
+
+function formatWorkoutTypeSummary(typeCountsForDay) {
+  if (!typeCountsForDay || Object.keys(typeCountsForDay).length === 0) {
+    return 'No workouts logged';
+  }
+  const entries = Object.entries(typeCountsForDay).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  return entries
+    .map(([typeName, count]) => {
+      const pluralizedType = count === 1 ? typeName : `${typeName}s`;
+      return `${count} ${pluralizedType}`;
+    })
+    .join(', ');
 }
 
 let graphTooltipEl = null;
@@ -114,7 +158,7 @@ function formatInteger(value) {
   return new Intl.NumberFormat().format(Number(value || 0));
 }
 
-function createContributionGraph(containerId, titlePrefix, metricData, valueFormatter) {
+function createContributionGraph(containerId, titlePrefix, metricData, valueFormatter, tooltipTextBuilder = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
@@ -178,7 +222,9 @@ function createContributionGraph(containerId, titlePrefix, metricData, valueForm
       } else {
         cell.classList.add(`level-${day.level}`);
         const formattedValue = valueFormatter(day.value);
-        const tooltipText = `${day.date}: ${titlePrefix} ${formattedValue}`;
+        const tooltipText = tooltipTextBuilder
+          ? tooltipTextBuilder(day, formattedValue)
+          : `${day.date}: ${titlePrefix} ${formattedValue}`;
         cell.addEventListener('mouseenter', function(event) {
           showGraphTooltip(tooltipText, event.clientX, event.clientY);
         });
@@ -277,6 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function renderFetchedData(data, requestedStart, requestedEnd, format = 'json') {
     const combinedRows = JSON.parse(data.combined || '[]');
     const sessionRows = JSON.parse(data.individual.sessions || '[]');
+    const workoutRows = JSON.parse(data.individual.workouts || '[]');
     const chartCanvas = document.getElementById('stressMeditationChart');
     if (chartCanvas && window.renderStressMeditationChart) {
       window.renderStressMeditationChart(data, format);
@@ -285,7 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const sleepContainer = document.getElementById('sleep-graph');
     const activityContainer = document.getElementById('activity-graph');
     const meditationContainer = document.getElementById('meditation-graph');
-    if (sleepContainer && activityContainer && meditationContainer) {
+    const workoutContainer = document.getElementById('workout-graph');
+    if (sleepContainer && activityContainer && meditationContainer && workoutContainer) {
       let start = requestedStart;
       let end = requestedEnd;
       if (!start || !end) {
@@ -297,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const dates = getDateRange(start, end);
       const maps = buildMetricMaps(combinedRows, sessionRows);
+      addWorkoutMetrics(workoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
       createContributionGraph(
         'sleep-graph',
         'Sleep:',
@@ -314,6 +363,16 @@ document.addEventListener('DOMContentLoaded', function() {
         'Meditation minutes:',
         toContributionLevels(maps.meditationMinutesByDate, dates, { mode: 'quantile' }),
         formatInteger
+      );
+      createContributionGraph(
+        'workout-graph',
+        'Workout minutes:',
+        toContributionLevels(maps.workoutMinutesByDate, dates, { mode: 'quantile' }),
+        formatInteger,
+        function(day, formattedValue) {
+          const summary = formatWorkoutTypeSummary(maps.workoutTypeCountsByDate[day.date]);
+          return `${day.date}: Workout minutes ${formattedValue} | ${summary}`;
+        }
       );
     }
   }

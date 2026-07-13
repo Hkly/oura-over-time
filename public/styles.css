@@ -222,11 +222,21 @@ button:hover {
 #activity-graph .level-3 { background-color: #239a3b; }
 #activity-graph .level-4 { background-color: #196127; }
 
+#workout-graph .level-0 { background-color: #ebedf0; }
+#workout-graph .level-1 { background-color: #fde68a; }
+#workout-graph .level-2 { background-color: #fbbf24; }
+#workout-graph .level-3 { background-color: #f59e0b; }
+#workout-graph .level-4 { background-color: #b45309; }
+
 #meditation-graph .level-0 { background-color: #ebedf0; }
 #meditation-graph .level-1 { background-color: #e0c3fc; }
 #meditation-graph .level-2 { background-color: #c39ddb; }
 #meditation-graph .level-3 { background-color: #9a67b5; }
 #meditation-graph .level-4 { background-color: #6b3a8c; }
+
+.sub-graph-description {
+  margin: 12px 0 8px;
+}
 
 .legend {
   display: flex;
