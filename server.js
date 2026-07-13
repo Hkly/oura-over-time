@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const OURA_AUTH_BASE_URL = 'https://cloud.ouraring.com/oauth/authorize';
 const OURA_TOKEN_URL = 'https://api.ouraring.com/oauth/token';
-const OURA_SCOPES = 'daily session workout heartrate';
+const OURA_SCOPES = 'daily session workout';
 const oauthStates = new Set();
 let runtimeAccessToken = null;
 

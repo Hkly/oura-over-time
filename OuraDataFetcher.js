@@ -9,7 +9,7 @@ const BASE_URL = 'https://api.ouraring.com/v2/usercollection';
 const COMBINED_DATA_TYPES = ['sleep', 'stress', 'activity'];
 
 // Data types that get their own separate CSV files
-const INDIVIDUAL_DATA_TYPES = ['sessions', 'workouts', 'heartrate'];
+const INDIVIDUAL_DATA_TYPES = ['sessions', 'workouts'];
 
 /**
  * Class to handle Oura data fetching operations
@@ -27,8 +27,7 @@ class OuraDataFetcher {
       stress: this.fetchStressData,
       activity: this.fetchActivityData,
       sessions: this.fetchSessionData,
-      workouts: this.fetchWorkoutData,
-      heartrate: this.fetchHeartRateData
+      workouts: this.fetchWorkoutData
     };
   }
 
@@ -74,17 +73,6 @@ class OuraDataFetcher {
     }
   }
 
-  async fetchDataByDateTime(endpoint) {
-    try {
-      return await this.fetchAllPages(endpoint, {
-        start_datetime: `${this.startDate}T00:00:00Z`,
-        end_datetime: `${this.endDate}T23:59:59Z`
-      });
-    } catch (error) {
-      throw new Error(this.formatApiError(endpoint, error));
-    }
-  }
-
   formatApiError(endpoint, error) {
     const status = error?.response?.status;
     const errorBody = error?.response?.data;
@@ -116,9 +104,7 @@ class OuraDataFetcher {
       light_sleep_sec: d.light_sleep_duration,
       average_hrv: d.average_hrv,
       average_heart_rate: d.average_heart_rate,
-      lowest_heart_rate: d.lowest_heart_rate,
-      heart_rate_samples: d.heart_rate || null,
-      hrv_samples: d.hrv || null
+      lowest_heart_rate: d.lowest_heart_rate
     }));
   }
 
@@ -161,9 +147,7 @@ class OuraDataFetcher {
         : "",
       average_heart_rate_variability: d.heart_rate_variability && d.heart_rate_variability.items
         ? this.calculateAverage(d.heart_rate_variability.items)
-        : "",
-      heart_rate_samples: d.heart_rate || null,
-      heart_rate_variability_samples: d.heart_rate_variability || null
+        : ""
     }));
   }
 
@@ -180,17 +164,6 @@ class OuraDataFetcher {
       source: d.source,
       start_datetime: d.start_datetime,
       end_datetime: d.end_datetime
-    }));
-  }
-
-  async fetchHeartRateData() {
-    console.log('Fetching heartrate data...');
-    const heartrate = await this.fetchDataByDateTime('heartrate');
-    return heartrate.map(d => ({
-      timestamp: d.timestamp,
-      timestamp_unix: d.timestamp_unix,
-      bpm: d.bpm,
-      source: d.source
     }));
   }
 

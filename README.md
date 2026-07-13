@@ -1,6 +1,6 @@
 # Oura Data Fetcher
 
-Local Node.js app for pulling Oura API v2 data (sleep, stress, activity, sessions, workouts, heartrate), saving raw exports, and previewing a stress/meditation chart in the browser.
+Local Node.js app for pulling Oura API v2 data (sleep, stress, activity, sessions, workouts), saving raw exports, and previewing a stress/meditation chart in the browser.
 
 ## Requirements
 - Node.js 18+
@@ -19,7 +19,7 @@ This app supports two server-side auth options:
      export OURA_CLIENT_SECRET="your-oura-client-secret"
      export OURA_REDIRECT_URI="http://localhost:3000/auth/callback"
      ```
-   - OAuth authorization requests these scopes: `daily session workout heartrate`
+   - OAuth authorization requests these scopes: `daily session workout`
    - Start the app and click **Authorize Oura** in the UI.
 2. Direct bearer token via environment variable:
    ```sh
@@ -45,9 +45,6 @@ This app supports two server-side auth options:
   - `oura_combined_raw.json` (sleep + stress + activity merged by date)
   - `oura_sessions.json`
   - `oura_workouts.json`
-  - `oura_heartrate.json` (time-series heart rate samples from `/v2/usercollection/heartrate`)
-
-Sleep and session exports also include raw sample payloads for heart-rate/HRV in addition to averages.
 
 ## Project structure
 - `server.js` — Express server + `/fetch` endpoint + OAuth routes
