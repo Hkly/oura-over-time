@@ -1,11 +1,21 @@
 // charts.js
 // Modular chart rendering for Oura Data Fetcher
 
-// Load Chart.js if not already loaded
-if (!window.Chart) {
-  var script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-  document.head.appendChild(script);
+let chartJsLoadPromise = null;
+
+function ensureChartJsLoaded() {
+  if (window.Chart) return Promise.resolve();
+  if (chartJsLoadPromise) return chartJsLoadPromise;
+
+  chartJsLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Chart.js'));
+    document.head.appendChild(script);
+  });
+
+  return chartJsLoadPromise;
 }
 
 function getStressMeditationData(data) {
@@ -48,7 +58,8 @@ function getStressMeditationData(data) {
 
 let stressMeditationChart = null;
 
-function renderStressMeditationChart(data, format) {
+async function renderStressMeditationChart(data, format) {
+  await ensureChartJsLoaded();
   const chartData = getStressMeditationData({
     format,
     combined: data.combined,

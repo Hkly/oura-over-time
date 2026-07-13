@@ -19,6 +19,14 @@ function getDateRangeFromRows(rows) {
   return { start: dates[0], end: dates[dates.length - 1] };
 }
 
+function filterRowsToDateRange(rows, start, end) {
+  if (!start || !end) return rows;
+  return rows.filter(row => {
+    if (!row?.date) return false;
+    return row.date >= start && row.date <= end;
+  });
+}
+
 function getLocalDateString(date = new Date()) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
@@ -363,10 +371,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const rangeButtons = Array.from(document.querySelectorAll('.range-button'));
   const startInput = document.getElementById('start');
   const endInput = document.getElementById('end');
+  const isStressPage = Boolean(document.getElementById('stressMeditationChart')) && !document.getElementById('sleep-graph');
   const defaultRange = getLastSixMonthsRange();
   startInput.value = defaultRange.start;
   endInput.value = defaultRange.end;
-  setActiveRangeButton('6m');
+  if (rangeButtons.length > 0) {
+    setActiveRangeButton('6m');
+  }
 
   function setAuthStatus(isAuthorized) {
     authStatusEl.textContent = isAuthorized
@@ -415,9 +426,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const combinedRows = JSON.parse(data.combined || '[]');
     const sessionRows = JSON.parse(data.individual.sessions || '[]');
     const workoutRows = JSON.parse(data.individual.workouts || '[]');
+    let start = requestedStart;
+    let end = requestedEnd;
+    if (!start || !end) {
+      const inferredRange = getDateRangeFromRows(combinedRows);
+      if (!inferredRange) return;
+      start = inferredRange.start;
+      end = inferredRange.end;
+    }
+
+    const filteredCombinedRows = filterRowsToDateRange(combinedRows, start, end);
+    const filteredSessionRows = filterRowsToDateRange(sessionRows, start, end);
+    const filteredWorkoutRows = filterRowsToDateRange(workoutRows, start, end);
+
     const chartCanvas = document.getElementById('stressMeditationChart');
     if (chartCanvas && window.renderStressMeditationChart) {
-      window.renderStressMeditationChart(data, format);
+      window.renderStressMeditationChart({
+        combined: JSON.stringify(filteredCombinedRows),
+        individual: {
+          sessions: JSON.stringify(filteredSessionRows)
+        }
+      }, format);
     }
 
     const sleepContainer = document.getElementById('sleep-graph');
@@ -425,18 +454,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const meditationContainer = document.getElementById('meditation-graph');
     const workoutContainer = document.getElementById('workout-graph');
     if (sleepContainer && activityContainer && meditationContainer && workoutContainer) {
-      let start = requestedStart;
-      let end = requestedEnd;
-      if (!start || !end) {
-        const inferredRange = getDateRangeFromRows(combinedRows);
-        if (!inferredRange) return;
-        start = inferredRange.start;
-        end = inferredRange.end;
-      }
-
       const dates = getDateRange(start, end);
-      const maps = buildMetricMaps(combinedRows, sessionRows);
-      addWorkoutMetrics(workoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
+      const maps = buildMetricMaps(filteredCombinedRows, filteredSessionRows);
+      addWorkoutMetrics(filteredWorkoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
       createContributionGraph(
         'sleep-graph',
         'Sleep:',
@@ -471,10 +491,12 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadCachedDataForCurrentRange() {
     const start = startInput.value;
     const end = endInput.value;
-    const cached = loadDailyCacheForRange(start, end);
+    const cached = isStressPage ? loadDailyCache() : loadDailyCacheForRange(start, end);
     if (!cached) return false;
 
-    renderFetchedData(cached.data, start, end, 'json');
+    const renderStart = isStressPage ? cached.start : start;
+    const renderEnd = isStressPage ? cached.end : end;
+    renderFetchedData(cached.data, renderStart, renderEnd, 'json');
     if (!resultDiv.textContent) {
       resultDiv.textContent = 'Loaded saved data from today.';
     }
@@ -515,20 +537,29 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   (async function initializePage() {
-    const savedDataLoaded = loadCachedDataForCurrentRange();
     const authorized = await refreshAuthStatus();
+    if (isStressPage) {
+      if (authorized) {
+        await loadOrFetchRange(defaultRange.start, defaultRange.end);
+      }
+      return;
+    }
+
+    const savedDataLoaded = loadCachedDataForCurrentRange();
     if (!savedDataLoaded && authorized) {
       await loadOrFetchRange(defaultRange.start, defaultRange.end);
     }
   })();
 
-  rangeButtons.forEach(button => {
-    button.addEventListener('click', async function() {
-      const presetRange = getPresetRange(button.dataset.range);
-      setActiveRangeButton(button.dataset.range);
-      await loadOrFetchRange(presetRange.start, presetRange.end);
+  if (rangeButtons.length > 0) {
+    rangeButtons.forEach(button => {
+      button.addEventListener('click', async function() {
+        const presetRange = getPresetRange(button.dataset.range);
+        setActiveRangeButton(button.dataset.range);
+        await loadOrFetchRange(presetRange.start, presetRange.end);
+      });
     });
-  });
+  }
 
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
