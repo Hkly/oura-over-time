@@ -43,6 +43,16 @@
           <p class="graph-description">Daily total sleep duration</p>
         </div>
         <div id="sleep-graph" class="contribution-graph"></div>
+        <div class="secondary-visual sleep-density-clocks">
+          <p class="graph-description sub-graph-description">Sleep timing density (bedtime in blue, wake time in orange)</p>
+          <div class="clock-grid">
+            <div class="clock-card clock-card-wide">
+              <h3>Sleep timing clock</h3>
+              <canvas id="sleep-timing-clock" class="clock-heatmap" width="320" height="320"></canvas>
+              <div id="sleep-timing-summary" class="clock-summary"></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="graph-section">

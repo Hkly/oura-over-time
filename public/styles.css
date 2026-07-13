@@ -282,6 +282,73 @@ button:hover {
   padding: 18px;
 }
 
+.sleep-density-clocks {
+  margin-top: 14px;
+}
+
+.clock-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr);
+  gap: 18px;
+}
+
+.clock-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.clock-card h3 {
+  margin-bottom: 10px;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.clock-card-wide {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.clock-heatmap {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+
+.clock-summary {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  color: #4a5568;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.clock-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.clock-summary-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.clock-summary-dot.bedtime {
+  background: #667eea;
+}
+
+.clock-summary-dot.wake {
+  background: #f59e0b;
+}
+
 footer {
   background: #f7fafc;
   padding: 20px 30px;
@@ -310,5 +377,9 @@ footer {
 
   .contribution-graph {
     padding: 15px;
+  }
+
+  .clock-grid {
+    grid-template-columns: 1fr;
   }
 }

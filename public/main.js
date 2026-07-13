@@ -201,6 +201,279 @@ function formatInteger(value) {
   return new Intl.NumberFormat().format(Number(value || 0));
 }
 
+function extractClockMinutes(timestamp) {
+  if (typeof timestamp !== 'string') return null;
+  const match = timestamp.match(/T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+function formatMinutesAsClock(totalMinutes) {
+  if (typeof totalMinutes !== 'number' || Number.isNaN(totalMinutes)) return '--';
+  const wrappedMinutes = ((Math.round(totalMinutes) % 1440) + 1440) % 1440;
+  const hours24 = Math.floor(wrappedMinutes / 60);
+  const minutes = wrappedMinutes % 60;
+  const period = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
+function drawRingSegment(ctx, cx, cy, innerRadius, outerRadius, startAngle, endAngle, fillColor) {
+  ctx.beginPath();
+  if (innerRadius <= 0) {
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerRadius, startAngle, endAngle);
+    ctx.closePath();
+  } else {
+    ctx.arc(cx, cy, outerRadius, startAngle, endAngle);
+    ctx.arc(cx, cy, innerRadius, endAngle, startAngle, true);
+    ctx.closePath();
+  }
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+}
+
+function getClockDensityCounts(minuteValues, bins) {
+  const counts = Array(bins).fill(0);
+  minuteValues.forEach(minutes => {
+    if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+    const normalized = ((minutes % 1440) + 1440) % 1440;
+    const bin = Math.min(bins - 1, Math.floor((normalized / 1440) * bins));
+    counts[bin] += 1;
+  });
+  return counts;
+}
+
+function drawDensityRing(ctx, counts, cx, cy, innerRadius, outerRadius, colorBase) {
+  const maxCount = Math.max(0, ...counts);
+  counts.forEach((count, index) => {
+    const bins = counts.length;
+    const startAngle = (index / bins) * Math.PI * 2 - Math.PI / 2;
+    const endAngle = ((index + 1) / bins) * Math.PI * 2 - Math.PI / 2;
+    const intensity = maxCount === 0 ? 0 : count / maxCount;
+    const alpha = count === 0 ? 0.12 : 0.2 + Math.pow(intensity, 0.8) * 0.8;
+    drawRingSegment(ctx, cx, cy, innerRadius, outerRadius, startAngle, endAngle, `${colorBase}${alpha})`);
+  });
+}
+
+function findPeakMinuteFromCounts(counts) {
+  const maxCount = Math.max(0, ...counts);
+  if (maxCount === 0) return null;
+  let maxIndex = 0;
+  counts.forEach((count, index) => {
+    if (count > counts[maxIndex]) maxIndex = index;
+  });
+  const minutesPerBin = 1440 / counts.length;
+  return (maxIndex + 0.5) * minutesPerBin;
+}
+
+function prepareCanvasForDevicePixelRatio(canvas, ctx) {
+  const displayWidth = Math.max(1, Math.round(canvas.clientWidth || canvas.width));
+  const displayHeight = Math.max(1, Math.round(canvas.clientHeight || canvas.height));
+  const dpr = window.devicePixelRatio || 1;
+  const scaledWidth = Math.round(displayWidth * dpr);
+  const scaledHeight = Math.round(displayHeight * dpr);
+
+  if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
+    canvas.width = scaledWidth;
+    canvas.height = scaledHeight;
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { width: displayWidth, height: displayHeight };
+}
+
+const sleepTimingClockHoverState = new WeakMap();
+
+function formatClockRange(startMinute, endMinute) {
+  return `${formatMinutesAsClock(startMinute)}-${formatMinutesAsClock(endMinute)}`;
+}
+
+function getSleepTimingClockHoverDetail(state, x, y) {
+  const dx = x - state.cx;
+  const dy = y - state.cy;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  let angle = Math.atan2(dy, dx) + Math.PI / 2;
+  if (angle < 0) {
+    angle += Math.PI * 2;
+  }
+  const bin = Math.min(state.bins - 1, Math.floor((angle / (Math.PI * 2)) * state.bins));
+  const startMinute = (bin / state.bins) * 1440;
+  const endMinute = ((bin + 1) / state.bins) * 1440;
+
+  if (distance <= state.wakeOuterRadius) {
+    const count = state.wakeCounts[bin];
+    if (!count) return null;
+    return {
+      text: `Wake: ${formatClockRange(startMinute, endMinute)} • ${count} ${count === 1 ? 'night' : 'nights'}`
+    };
+  }
+
+  if (distance >= state.bedtimeInnerRadius && distance <= state.bedtimeOuterRadius) {
+    const count = state.bedtimeCounts[bin];
+    if (!count) return null;
+    return {
+      text: `Bedtime: ${formatClockRange(startMinute, endMinute)} • ${count} ${count === 1 ? 'night' : 'nights'}`
+    };
+  }
+
+  return null;
+}
+
+function bindSleepTimingClockHover(canvas) {
+  if (!canvas || canvas.dataset.clockHoverBound === 'true') return;
+  canvas.dataset.clockHoverBound = 'true';
+
+  canvas.addEventListener('mousemove', event => {
+    const state = sleepTimingClockHoverState.get(canvas);
+    if (!state) {
+      hideGraphTooltip();
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      hideGraphTooltip();
+      return;
+    }
+
+    const x = ((event.clientX - rect.left) / rect.width) * state.width;
+    const y = ((event.clientY - rect.top) / rect.height) * state.height;
+    const hoverDetail = getSleepTimingClockHoverDetail(state, x, y);
+    if (!hoverDetail) {
+      hideGraphTooltip();
+      return;
+    }
+
+    showGraphTooltip(hoverDetail.text, event.clientX, event.clientY);
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    hideGraphTooltip();
+  });
+}
+
+function drawCombinedSleepTimingClock(canvasId, bedtimeMinutes, wakeMinutes, options = {}) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return { bedtimePeakMinute: null, wakePeakMinute: null };
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { bedtimePeakMinute: null, wakePeakMinute: null };
+
+  const bins = options.bins || 96;
+  const bedtimeCounts = getClockDensityCounts(bedtimeMinutes, bins);
+  const wakeCounts = getClockDensityCounts(wakeMinutes, bins);
+
+  const { width, height } = prepareCanvasForDevicePixelRatio(canvas, ctx);
+  const cx = width / 2;
+  const cy = height / 2;
+  const minDimension = Math.min(width, height);
+  const wakeInnerRadius = 0;
+  const wakeOuterRadius = minDimension * 0.21;
+  const bedtimeInnerRadius = wakeOuterRadius;
+  const bedtimeOuterRadius = minDimension * 0.36;
+  bindSleepTimingClockHover(canvas);
+  sleepTimingClockHoverState.set(canvas, {
+    width,
+    height,
+    cx,
+    cy,
+    bins,
+    wakeOuterRadius,
+    bedtimeInnerRadius,
+    bedtimeOuterRadius,
+    bedtimeCounts,
+    wakeCounts
+  });
+
+  ctx.clearRect(0, 0, width, height);
+  drawDensityRing(ctx, bedtimeCounts, cx, cy, bedtimeInnerRadius, bedtimeOuterRadius, 'rgba(102, 126, 234, ');
+  drawDensityRing(ctx, wakeCounts, cx, cy, wakeInnerRadius, wakeOuterRadius, 'rgba(245, 158, 11, ');
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(45, 55, 72, 0.15)';
+  [wakeOuterRadius, bedtimeInnerRadius, bedtimeOuterRadius].forEach(radius => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(45, 55, 72, 0.25)';
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let hour = 0; hour < 24; hour += 3) {
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+    const innerTick = bedtimeOuterRadius + 2;
+    const outerTick = bedtimeOuterRadius + 9;
+    const textRadius = bedtimeOuterRadius + 20;
+    const x1 = cx + Math.cos(angle) * innerTick;
+    const y1 = cy + Math.sin(angle) * innerTick;
+    const x2 = cx + Math.cos(angle) * outerTick;
+    const y2 = cy + Math.sin(angle) * outerTick;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    const labelHour = hour % 12 || 12;
+    const half = hour >= 12 ? 'p' : 'a';
+    ctx.fillText(`${labelHour}${half}`, cx + Math.cos(angle) * textRadius, cy + Math.sin(angle) * textRadius);
+  }
+
+  const bedtimePeakMinute = findPeakMinuteFromCounts(bedtimeCounts);
+  const wakePeakMinute = findPeakMinuteFromCounts(wakeCounts);
+  if (bedtimePeakMinute === null && wakePeakMinute === null) {
+    ctx.fillStyle = '#718096';
+    ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    ctx.fillText('No data in range', cx, cy);
+    return { bedtimePeakMinute, wakePeakMinute };
+  }
+
+  ctx.fillStyle = '#2d3748';
+  ctx.font = '600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+  return { bedtimePeakMinute, wakePeakMinute };
+}
+
+function renderSleepTimeDensityClocks(combinedRows) {
+  const summaryEl = document.getElementById('sleep-timing-summary');
+  const bedtimeMinutes = [];
+  const wakeMinutes = [];
+
+  combinedRows.forEach(row => {
+    const bedtime = extractClockMinutes(row.bedtime_start);
+    if (bedtime !== null) bedtimeMinutes.push(bedtime);
+    const waketime = extractClockMinutes(row.bedtime_end);
+    if (waketime !== null) wakeMinutes.push(waketime);
+  });
+
+  const { bedtimePeakMinute, wakePeakMinute } = drawCombinedSleepTimingClock('sleep-timing-clock', bedtimeMinutes, wakeMinutes);
+  if (!summaryEl) return;
+
+  if (bedtimePeakMinute === null && wakePeakMinute === null) {
+    summaryEl.textContent = 'No sleep timing data in this range.';
+    return;
+  }
+
+  summaryEl.innerHTML = `
+    <span class="clock-summary-item">
+      <span class="clock-summary-dot bedtime"></span>
+      Bedtime peak: ${bedtimePeakMinute === null ? '--' : formatMinutesAsClock(bedtimePeakMinute)}
+    </span>
+    <span class="clock-summary-item">
+      <span class="clock-summary-dot wake"></span>
+      Wake peak: ${wakePeakMinute === null ? '--' : formatMinutesAsClock(wakePeakMinute)}
+    </span>
+  `;
+}
+
 function createContributionGraph(containerId, titlePrefix, metricData, valueFormatter, tooltipTextBuilder = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -463,6 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toContributionLevels(maps.sleepSecondsByDate, dates, { mode: 'quantile' }),
         formatSleepSeconds
       );
+      renderSleepTimeDensityClocks(filteredCombinedRows);
       createContributionGraph(
         'activity-graph',
         'Steps:',
