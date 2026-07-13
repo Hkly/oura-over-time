@@ -51,7 +51,42 @@ function buildMetricMaps(combinedRows, sessionRows) {
   return { sleepSecondsByDate, stepsByDate, meditationMinutesByDate };
 }
 
-function createContributionGraph(containerId, titlePrefix, metricData) {
+let graphTooltipEl = null;
+
+function ensureGraphTooltip() {
+  if (graphTooltipEl) return graphTooltipEl;
+  graphTooltipEl = document.createElement('div');
+  graphTooltipEl.className = 'graph-tooltip';
+  graphTooltipEl.style.display = 'none';
+  document.body.appendChild(graphTooltipEl);
+  return graphTooltipEl;
+}
+
+function showGraphTooltip(text, x, y) {
+  const tooltip = ensureGraphTooltip();
+  tooltip.textContent = text;
+  tooltip.style.display = 'block';
+  tooltip.style.left = `${x + 12}px`;
+  tooltip.style.top = `${y + 12}px`;
+}
+
+function hideGraphTooltip() {
+  const tooltip = ensureGraphTooltip();
+  tooltip.style.display = 'none';
+}
+
+function formatSleepSeconds(value) {
+  const totalMinutes = Math.round(Number(value || 0) / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+}
+
+function formatInteger(value) {
+  return new Intl.NumberFormat().format(Number(value || 0));
+}
+
+function createContributionGraph(containerId, titlePrefix, metricData, valueFormatter) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
@@ -114,7 +149,17 @@ function createContributionGraph(containerId, titlePrefix, metricData) {
         cell.style.visibility = 'hidden';
       } else {
         cell.classList.add(`level-${day.level}`);
-        cell.title = `${day.date}: ${titlePrefix} ${day.value}`;
+        const formattedValue = valueFormatter(day.value);
+        const tooltipText = `${day.date}: ${titlePrefix} ${formattedValue}`;
+        cell.addEventListener('mouseenter', function(event) {
+          showGraphTooltip(tooltipText, event.clientX, event.clientY);
+        });
+        cell.addEventListener('mousemove', function(event) {
+          showGraphTooltip(tooltipText, event.clientX, event.clientY);
+        });
+        cell.addEventListener('mouseleave', function() {
+          hideGraphTooltip();
+        });
         const month = day.dateObj.getUTCMonth();
         if (month !== currentMonth) {
           currentMonth = month;
@@ -241,17 +286,20 @@ document.addEventListener('DOMContentLoaded', function() {
         createContributionGraph(
           'sleep-graph',
           'Sleep seconds:',
-          toContributionLevels(maps.sleepSecondsByDate, dates)
+          toContributionLevels(maps.sleepSecondsByDate, dates),
+          formatSleepSeconds
         );
         createContributionGraph(
           'activity-graph',
           'Steps:',
-          toContributionLevels(maps.stepsByDate, dates)
+          toContributionLevels(maps.stepsByDate, dates),
+          formatInteger
         );
         createContributionGraph(
           'meditation-graph',
           'Meditation minutes:',
-          toContributionLevels(maps.meditationMinutesByDate, dates)
+          toContributionLevels(maps.meditationMinutesByDate, dates),
+          formatInteger
         );
       }
     } catch (error) {

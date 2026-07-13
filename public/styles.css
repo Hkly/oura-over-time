@@ -197,6 +197,19 @@ button:hover {
   transform: scale(1.1);
 }
 
+.graph-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.95);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 #sleep-graph .level-0 { background-color: #ebedf0; }
 #sleep-graph .level-1 { background-color: #c6e2f5; }
 #sleep-graph .level-2 { background-color: #7fb3d5; }
