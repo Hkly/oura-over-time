@@ -283,8 +283,8 @@ button:hover {
 #stress-recovery-graph .level-0 { background-color: #ebedf0; }
 #stress-recovery-graph .level-1 { background-color: hsl(192, 72%, 44%); }
 #stress-recovery-graph .level-2 { background-color: hsl(192, 72%, 66%); }
-#stress-recovery-graph .level-3 { background-color: hsl(18, 85%, 66%); }
-#stress-recovery-graph .level-4 { background-color: hsl(18, 85%, 44%); }
+#stress-recovery-graph .level-3 { background-color: #ff8080; }
+#stress-recovery-graph .level-4 { background-color: #ff6161; }
 
 .legend {
   display: flex;

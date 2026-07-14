@@ -925,18 +925,10 @@ document.addEventListener('DOMContentLoaded', function() {
               : 'Balanced';
           return `${day.date}: Stress ${formatSecondsAsDuration(day.stress)} | Recovery ${formatSecondsAsDuration(day.recovery)} (${direction})`;
         },
-        function(day) {
-          if (day.bucket === null) return null;
-          if (day.bucket === 0) return 'rgb(245, 245, 245)';
-          if (day.bucket === 1) return 'hsl(192, 72%, 66%)';
-          if (day.bucket === 2) return 'hsl(192, 72%, 44%)';
-          if (day.bucket === -1) return 'hsl(330, 78%, 72%)';
-          return 'hsl(330, 78%, 56%)';
-        },
+        null,
         {
           startLabel: 'More recovery',
           endLabel: 'More stress',
-          colors: ['hsl(192, 72%, 44%)', 'hsl(192, 72%, 66%)', 'rgb(245, 245, 245)', 'hsl(330, 78%, 72%)', 'hsl(330, 78%, 56%)']
         }
       );
       createContributionGraph(
