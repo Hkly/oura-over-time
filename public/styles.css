@@ -247,7 +247,9 @@ button:hover {
   font-size: 12px;
   line-height: 1.2;
   pointer-events: none;
-  white-space: nowrap;
+  max-width: min(320px, calc(100vw - 16px));
+  white-space: normal;
+  word-break: break-word;
 }
 
 #sleep-graph .level-0 { background-color: #ebedf0; }

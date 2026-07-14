@@ -305,8 +305,28 @@ function showGraphTooltip(text, x, y) {
   const tooltip = ensureGraphTooltip();
   tooltip.textContent = text;
   tooltip.style.display = 'block';
-  tooltip.style.left = `${x + 12}px`;
-  tooltip.style.top = `${y + 12}px`;
+
+  const offset = 12;
+  const viewportPadding = 8;
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+  let left = x + offset;
+  let top = y + offset;
+
+  if (left + tooltipRect.width > viewportWidth - viewportPadding) {
+    left = viewportWidth - tooltipRect.width - viewportPadding;
+  }
+  if (top + tooltipRect.height > viewportHeight - viewportPadding) {
+    top = y - tooltipRect.height - offset;
+  }
+
+  left = Math.max(viewportPadding, left);
+  top = Math.max(viewportPadding, top);
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
 }
 
 function hideGraphTooltip() {
@@ -335,6 +355,38 @@ function formatSecondsAsDuration(value) {
     return `${sign}${new Intl.NumberFormat().format(minutes)}m`;
   }
   return `${sign}${new Intl.NumberFormat().format(hours)}h ${minutes}m`;
+}
+
+function buildLegendRangeTooltips(metricData, levels, valueFormatter, labels = {}, zeroLabel = 'No data') {
+  const valuesByLevel = new Map();
+  metricData.forEach(day => {
+    if (typeof day?.level !== 'number') return;
+    if (!valuesByLevel.has(day.level)) {
+      valuesByLevel.set(day.level, []);
+    }
+    valuesByLevel.get(day.level).push(Number(day.value || 0));
+  });
+
+  return levels.map(level => {
+    const label = labels[level] || (level === 0 ? zeroLabel : `Range ${level}`);
+    const values = valuesByLevel.get(level) || [];
+    const dayCount = values.length;
+
+    if (level === 0) {
+      return `${label} · ${dayCount} days`;
+    }
+
+    if (dayCount === 0) {
+      return `${label} · 0 days`;
+    }
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const formattedMin = valueFormatter(minValue);
+    const formattedMax = valueFormatter(maxValue);
+    const rangeText = minValue === maxValue ? formattedMin : `${formattedMin} - ${formattedMax}`;
+    return `${label} · ${dayCount} days · ${rangeText}`;
+  });
 }
 
 function extractClockMinutes(timestamp) {
@@ -744,6 +796,9 @@ function createContributionGraph(
   const legendLevelOrder = Array.isArray(legendOptions?.levelOrder)
     ? legendOptions.levelOrder
     : null;
+  const legendTooltips = Array.isArray(legendOptions?.tooltips)
+    ? legendOptions.tooltips
+    : null;
   const legendCellCount = legendLevelOrder?.length || legendColors?.length || 5;
 
   const startLabel = document.createElement('span');
@@ -759,6 +814,19 @@ function createContributionGraph(
     } else {
       const level = legendLevelOrder ? legendLevelOrder[i] : i;
       cell.classList.add(`level-${level}`);
+    }
+    if (legendTooltips && legendTooltips[i]) {
+      const legendTooltipText = legendTooltips[i];
+      cell.setAttribute('aria-label', legendTooltipText);
+      cell.addEventListener('mouseenter', function(event) {
+        showGraphTooltip(legendTooltipText, event.clientX, event.clientY);
+      });
+      cell.addEventListener('mousemove', function(event) {
+        showGraphTooltip(legendTooltipText, event.clientX, event.clientY);
+      });
+      cell.addEventListener('mouseleave', function() {
+        hideGraphTooltip();
+      });
     }
     legend.appendChild(cell);
   }
@@ -908,29 +976,69 @@ document.addEventListener('DOMContentLoaded', function() {
       const dates = getDateRange(start, end);
       const maps = buildMetricMaps(filteredCombinedRows, filteredSessionRows);
       addWorkoutMetrics(filteredWorkoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
+      const sleepLevelData = toContributionLevels(maps.sleepSecondsByDate, dates, { mode: 'quantile' });
+      const activityLevelData = toContributionLevels(maps.stepsByDate, dates, { mode: 'quantile' });
+      const sedentaryLevelData = toSedentaryThresholdLevels(maps.sedentarySecondsByDate, dates);
+      const stressRecoveryLevelData = toStressRecoveryBalanceLevels(maps.stressRecoveryByDate, dates);
+      const meditationLevelData = toContributionLevels(maps.meditationMinutesByDate, dates, { mode: 'quantile' });
+      const workoutLevelData = toZScoreLevels(maps.workoutMinutesByDate, dates);
+
       createContributionGraph(
         'sleep-graph',
         'Sleep:',
-        toContributionLevels(maps.sleepSecondsByDate, dates, { mode: 'quantile' }),
-        formatSleepSeconds
+        sleepLevelData,
+        formatSleepSeconds,
+        {
+          legendOptions: {
+            tooltips: buildLegendRangeTooltips(
+              sleepLevelData,
+              [0, 1, 2, 3, 4],
+              formatSleepSeconds,
+              {},
+              'No sleep data'
+            )
+          }
+        }
       );
       renderSleepTimeDensityClocks(filteredCombinedRows);
       createContributionGraph(
         'activity-graph',
         'Steps:',
-        toContributionLevels(maps.stepsByDate, dates, { mode: 'quantile' }),
-        formatInteger
+        activityLevelData,
+        formatInteger,
+        {
+          legendOptions: {
+            tooltips: buildLegendRangeTooltips(
+              activityLevelData,
+              [0, 1, 2, 3, 4],
+              formatInteger,
+              {},
+              'No step data'
+            )
+          }
+        }
       );
       createContributionGraph(
         'sedentary-graph',
         'Sedentary time:',
-        toSedentaryThresholdLevels(maps.sedentarySecondsByDate, dates),
-        formatSecondsAsDuration
+        sedentaryLevelData,
+        formatSecondsAsDuration,
+        {
+          legendOptions: {
+            tooltips: buildLegendRangeTooltips(
+              sedentaryLevelData,
+              [0, 1, 2, 3, 4],
+              formatSecondsAsDuration,
+              {},
+              'No sedentary data'
+            )
+          }
+        }
       );
       createContributionGraph(
         'stress-recovery-graph',
         'Stress/Recovery balance:',
-        toStressRecoveryBalanceLevels(maps.stressRecoveryByDate, dates),
+        stressRecoveryLevelData,
         formatSecondsAsDuration,
         {
           tooltipTextBuilder: function(day) {
@@ -947,25 +1055,50 @@ document.addEventListener('DOMContentLoaded', function() {
           legendOptions: {
             startLabel: 'More recovery',
             endLabel: 'More stress',
-            levelOrder: [1, 2, 3, 4, 5, 6, 7]
+            levelOrder: [1, 2, 3, 4, 5, 6, 7],
+            tooltips: buildLegendRangeTooltips(
+              stressRecoveryLevelData,
+              [1, 2, 3, 4, 5, 6, 7],
+              formatSecondsAsDuration
+            )
           }
         }
       );
       createContributionGraph(
         'meditation-graph',
         'Meditation minutes:',
-        toContributionLevels(maps.meditationMinutesByDate, dates, { mode: 'quantile' }),
-        formatInteger
+        meditationLevelData,
+        formatInteger,
+        {
+          legendOptions: {
+            tooltips: buildLegendRangeTooltips(
+              meditationLevelData,
+              [0, 1, 2, 3, 4],
+              formatInteger,
+              {},
+              'No meditation sessions'
+            )
+          }
+        }
       );
       createContributionGraph(
         'workout-graph',
         'Workout minutes:',
-        toZScoreLevels(maps.workoutMinutesByDate, dates),
+        workoutLevelData,
         formatInteger,
         {
           tooltipTextBuilder: function(day, formattedValue) {
             const summary = formatWorkoutTypeSummary(maps.workoutTypeCountsByDate[day.date]);
             return `${day.date}: Workout minutes ${formattedValue} | ${summary}`;
+          },
+          legendOptions: {
+            tooltips: buildLegendRangeTooltips(
+              workoutLevelData,
+              [0, 1, 2, 3, 4],
+              formatInteger,
+              {},
+              'No workouts'
+            )
           }
         }
       );
