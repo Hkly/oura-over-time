@@ -976,11 +976,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const dates = getDateRange(start, end);
       const maps = buildMetricMaps(filteredCombinedRows, filteredSessionRows);
       addWorkoutMetrics(filteredWorkoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
-      const sleepLevelData = toContributionLevels(maps.sleepSecondsByDate, dates, { mode: 'quantile' });
-      const activityLevelData = toContributionLevels(maps.stepsByDate, dates, { mode: 'quantile' });
+      const sleepLevelData = toZScoreLevels(maps.sleepSecondsByDate, dates);
+      const activityLevelData = toZScoreLevels(maps.stepsByDate, dates);
       const sedentaryLevelData = toSedentaryThresholdLevels(maps.sedentarySecondsByDate, dates);
       const stressRecoveryLevelData = toStressRecoveryBalanceLevels(maps.stressRecoveryByDate, dates);
-      const meditationLevelData = toContributionLevels(maps.meditationMinutesByDate, dates, { mode: 'quantile' });
+      const meditationLevelData = toZScoreLevels(maps.meditationMinutesByDate, dates);
       const workoutLevelData = toZScoreLevels(maps.workoutMinutesByDate, dates);
 
       createContributionGraph(
