@@ -281,10 +281,13 @@ button:hover {
 #meditation-graph .level-4 { background-color: #6b3a8c; }
 
 #stress-recovery-graph .level-0 { background-color: #ebedf0; }
-#stress-recovery-graph .level-1 { background-color: hsl(192, 72%, 44%); }
-#stress-recovery-graph .level-2 { background-color: hsl(192, 72%, 66%); }
-#stress-recovery-graph .level-3 { background-color: #ff8080; }
-#stress-recovery-graph .level-4 { background-color: #ff6161; }
+#stress-recovery-graph .level-1 { background-color: hsl(192, 72%, 40%); }
+#stress-recovery-graph .level-2 { background-color: hsl(192, 72%, 52%); }
+#stress-recovery-graph .level-3 { background-color: hsl(192, 72%, 66%); }
+#stress-recovery-graph .level-4 { background-color: #f3f4f6; }
+#stress-recovery-graph .level-5 { background-color: #ffb3b3; }
+#stress-recovery-graph .level-6 { background-color: #ff8c8c; }
+#stress-recovery-graph .level-7 { background-color: #ff6161; }
 
 .legend {
   display: flex;
