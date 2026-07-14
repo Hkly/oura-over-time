@@ -606,10 +606,14 @@ function createContributionGraph(
   titlePrefix,
   metricData,
   valueFormatter,
-  tooltipTextBuilder = null,
-  cellColorBuilder = null,
-  legendOptions = null
+  options = {}
 ) {
+  const {
+    tooltipTextBuilder = null,
+    cellColorBuilder = null,
+    legendOptions = null
+  } = options;
+
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
@@ -914,21 +918,22 @@ document.addEventListener('DOMContentLoaded', function() {
         'Stress/Recovery balance:',
         toStressRecoveryBalanceLevels(maps.stressRecoveryByDate, dates),
         formatSecondsAsDuration,
-        function(day) {
-          if (day.stress === null || day.recovery === null) {
-            return `${day.date}: No stress/recovery data`;
-          }
-          const direction = day.balance > 0
-            ? 'Recovery-leaning'
-            : day.balance < 0
-              ? 'Stress-leaning'
-              : 'Balanced';
-          return `${day.date}: Stress ${formatSecondsAsDuration(day.stress)} | Recovery ${formatSecondsAsDuration(day.recovery)} (${direction})`;
-        },
-        null,
         {
-          startLabel: 'More recovery',
-          endLabel: 'More stress',
+          tooltipTextBuilder: function(day) {
+            if (day.stress === null || day.recovery === null) {
+              return `${day.date}: No stress/recovery data`;
+            }
+            const direction = day.balance > 0
+              ? 'Recovery-leaning'
+              : day.balance < 0
+                ? 'Stress-leaning'
+                : 'Balanced';
+            return `${day.date}: Stress ${formatSecondsAsDuration(day.stress)} | Recovery ${formatSecondsAsDuration(day.recovery)} (${direction})`;
+          },
+          legendOptions: {
+            startLabel: 'More recovery',
+            endLabel: 'More stress',
+          }
         }
       );
       createContributionGraph(
@@ -942,9 +947,11 @@ document.addEventListener('DOMContentLoaded', function() {
         'Workout minutes:',
         toZScoreLevels(maps.workoutMinutesByDate, dates),
         formatInteger,
-        function(day, formattedValue) {
-          const summary = formatWorkoutTypeSummary(maps.workoutTypeCountsByDate[day.date]);
-          return `${day.date}: Workout minutes ${formattedValue} | ${summary}`;
+        {
+          tooltipTextBuilder: function(day, formattedValue) {
+            const summary = formatWorkoutTypeSummary(maps.workoutTypeCountsByDate[day.date]);
+            return `${day.date}: Workout minutes ${formattedValue} | ${summary}`;
+          }
         }
       );
     }
