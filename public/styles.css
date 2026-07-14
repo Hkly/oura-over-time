@@ -262,6 +262,12 @@ button:hover {
 #activity-graph .level-3 { background-color: #239a3b; }
 #activity-graph .level-4 { background-color: #196127; }
 
+#sedentary-graph .level-0 { background-color: #ebedf0; }
+#sedentary-graph .level-1 { background-color: #ffe8e1; }
+#sedentary-graph .level-2 { background-color: #ffbfae; }
+#sedentary-graph .level-3 { background-color: #ff9680; }
+#sedentary-graph .level-4 { background-color: #ff6f61; }
+
 #workout-graph .level-0 { background-color: #ebedf0; }
 #workout-graph .level-1 { background-color: #fde68a; }
 #workout-graph .level-2 { background-color: #fbbf24; }

@@ -95,6 +95,24 @@ function toContributionLevels(valueMap, dates, options = {}) {
   });
 }
 
+function toSedentaryThresholdLevels(sedentarySecondsByDate, dates) {
+  const FIVE_HOURS = 5 * 60 * 60;
+  const SEVEN_HOURS = 7 * 60 * 60;
+  const NINE_HOURS = 9 * 60 * 60;
+
+  return dates.map(date => {
+    const value = Number(sedentarySecondsByDate[date] || 0);
+    let level = 0;
+
+    if (value > 0 && value <= FIVE_HOURS) level = 1;
+    else if (value <= SEVEN_HOURS) level = 2;
+    else if (value <= NINE_HOURS) level = 3;
+    else if (value > NINE_HOURS) level = 4;
+
+    return { date, level, value };
+  });
+}
+
 function toStressRecoveryBalanceLevels(stressRecoveryByDate, dates) {
   const balances = dates
     .map(date => stressRecoveryByDate[date]?.balance)
@@ -147,6 +165,7 @@ function toStressRecoveryBalanceLevels(stressRecoveryByDate, dates) {
 function buildMetricMaps(combinedRows, sessionRows) {
   const sleepSecondsByDate = {};
   const stepsByDate = {};
+  const sedentarySecondsByDate = {};
   const meditationMinutesByDate = {};
   const stressRecoveryByDate = {};
   const workoutMinutesByDate = {};
@@ -156,6 +175,7 @@ function buildMetricMaps(combinedRows, sessionRows) {
     if (!row.date) return;
     sleepSecondsByDate[row.date] = Number(row.total_sleep_sec || 0);
     stepsByDate[row.date] = Number(row.steps || 0);
+    sedentarySecondsByDate[row.date] = Number(row.sedentary_time || 0);
     if (meditationMinutesByDate[row.date] === undefined) {
       meditationMinutesByDate[row.date] = 0;
     }
@@ -186,6 +206,7 @@ function buildMetricMaps(combinedRows, sessionRows) {
   return {
     sleepSecondsByDate,
     stepsByDate,
+    sedentarySecondsByDate,
     meditationMinutesByDate,
     stressRecoveryByDate,
     workoutMinutesByDate,
@@ -830,10 +851,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const sleepContainer = document.getElementById('sleep-graph');
     const activityContainer = document.getElementById('activity-graph');
+    const sedentaryContainer = document.getElementById('sedentary-graph');
     const stressRecoveryContainer = document.getElementById('stress-recovery-graph');
     const meditationContainer = document.getElementById('meditation-graph');
     const workoutContainer = document.getElementById('workout-graph');
-    if (sleepContainer && activityContainer && stressRecoveryContainer && meditationContainer && workoutContainer) {
+    if (sleepContainer && activityContainer && sedentaryContainer && stressRecoveryContainer && meditationContainer && workoutContainer) {
       const dates = getDateRange(start, end);
       const maps = buildMetricMaps(filteredCombinedRows, filteredSessionRows);
       addWorkoutMetrics(filteredWorkoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
@@ -849,6 +871,12 @@ document.addEventListener('DOMContentLoaded', function() {
         'Steps:',
         toContributionLevels(maps.stepsByDate, dates, { mode: 'quantile' }),
         formatInteger
+      );
+      createContributionGraph(
+        'sedentary-graph',
+        'Sedentary time:',
+        toSedentaryThresholdLevels(maps.sedentarySecondsByDate, dates),
+        formatSecondsAsDuration
       );
       createContributionGraph(
         'stress-recovery-graph',
