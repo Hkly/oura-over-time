@@ -113,6 +113,37 @@ function toSedentaryThresholdLevels(sedentarySecondsByDate, dates) {
   });
 }
 
+function toZScoreLevels(valueMap, dates) {
+  const values = dates.map(date => Number(valueMap[date] || 0));
+  const nonZeroValues = values.filter(value => value > 0);
+  if (nonZeroValues.length === 0) {
+    return dates.map(date => ({ date, level: 0, value: 0 }));
+  }
+
+  const mean = nonZeroValues.reduce((sum, value) => sum + value, 0) / nonZeroValues.length;
+  const variance = nonZeroValues.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / nonZeroValues.length;
+  const stdDev = Math.sqrt(variance);
+
+  return dates.map(date => {
+    const value = Number(valueMap[date] || 0);
+    if (value === 0) {
+      return { date, level: 0, value };
+    }
+
+    if (stdDev === 0) {
+      return { date, level: 3, value };
+    }
+
+    const zScore = (value - mean) / stdDev;
+    let level = 2;
+    if (zScore <= -1) level = 1;
+    else if (zScore >= 1) level = 4;
+    else if (zScore >= 0) level = 3;
+
+    return { date, level, value };
+  });
+}
+
 function toStressRecoveryBalanceLevels(stressRecoveryByDate, dates) {
   const balances = dates
     .map(date => stressRecoveryByDate[date]?.balance)
@@ -917,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function() {
       createContributionGraph(
         'workout-graph',
         'Workout minutes:',
-        toContributionLevels(maps.workoutMinutesByDate, dates, { mode: 'quantile' }),
+        toZScoreLevels(maps.workoutMinutesByDate, dates),
         formatInteger,
         function(day, formattedValue) {
           const summary = formatWorkoutTypeSummary(maps.workoutTypeCountsByDate[day.date]);
