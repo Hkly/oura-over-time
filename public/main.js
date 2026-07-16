@@ -866,16 +866,51 @@ document.addEventListener('DOMContentLoaded', function() {
   const authStatusEl = document.getElementById('authStatus');
   const resultDiv = document.getElementById('result');
   const authorizeBtn = document.getElementById('authorizeBtn');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
   const form = document.getElementById('ouraForm');
   const rangeButtons = Array.from(document.querySelectorAll('.range-button'));
   const startInput = document.getElementById('start');
   const endInput = document.getElementById('end');
+  const themeStorageKey = 'oura-theme';
   const isStressPage = Boolean(document.getElementById('stressMeditationChart')) && !document.getElementById('sleep-graph');
   const defaultRange = getLastSixMonthsRange();
   startInput.value = defaultRange.start;
   endInput.value = defaultRange.end;
   if (rangeButtons.length > 0) {
     setActiveRangeButton('6m');
+  }
+
+  function getPreferredTheme() {
+    const savedTheme = localStorage.getItem(themeStorageKey);
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      return savedTheme;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  }
+
+  function applyTheme(theme) {
+    document.body.classList.toggle('theme-dark', theme === 'dark');
+    document.body.classList.toggle('theme-light', theme === 'light');
+    if (themeToggleBtn) {
+      const nextModeLabel = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+      themeToggleBtn.textContent = theme === 'dark' ? '☀︎' : '☾';
+      themeToggleBtn.setAttribute('aria-label', nextModeLabel);
+      themeToggleBtn.title = nextModeLabel;
+    }
+  }
+
+  let currentTheme = getPreferredTheme();
+  applyTheme(currentTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', function() {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(themeStorageKey, currentTheme);
+      applyTheme(currentTheme);
+    });
   }
 
   function setAuthStatus(isAuthorized) {

@@ -55,6 +55,7 @@ main {
 }
 
 .controls-section {
+  position: relative;
   background: #f7fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -66,7 +67,23 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding-right: 44px;
   margin-bottom: 10px;
+}
+
+.theme-toggle-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .range-buttons {
@@ -392,89 +409,87 @@ footer {
   border-top: 1px solid #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-    color: #e5e7eb;
-  }
+body.theme-dark {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #e5e7eb;
+}
 
-  .container {
-    background: #111827;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  }
+body.theme-dark .container {
+  background: #111827;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
 
-  .controls-section,
-  .metric-panel,
-  .secondary-visual,
-  .contribution-graph,
-  footer {
-    background: #1f2937;
-    border-color: #374151;
-  }
+body.theme-dark .controls-section,
+body.theme-dark .metric-panel,
+body.theme-dark .secondary-visual,
+body.theme-dark .contribution-graph,
+body.theme-dark footer {
+  background: #1f2937;
+  border-color: #374151;
+}
 
-  .dashboard-section__title,
-  .metric-panel__title {
-    color: #f3f4f6;
-  }
+body.theme-dark .dashboard-section__title,
+body.theme-dark .metric-panel__title {
+  color: #f3f4f6;
+}
 
-  .dashboard-section__description,
-  .metric-panel__description,
-  .auth-status,
-  .result,
-  footer,
-  .month-label,
-  .weekday-label,
-  .legend,
-  .clock-summary {
-    color: #cbd5e1;
-  }
+body.theme-dark .dashboard-section__description,
+body.theme-dark .metric-panel__description,
+body.theme-dark .auth-status,
+body.theme-dark .result,
+body.theme-dark footer,
+body.theme-dark .month-label,
+body.theme-dark .weekday-label,
+body.theme-dark .legend,
+body.theme-dark .clock-summary {
+  color: #cbd5e1;
+}
 
-  .controls-form label {
-    color: #cbd5e1;
-  }
+body.theme-dark .controls-form label {
+  color: #cbd5e1;
+}
 
-  .controls-form input[type="date"] {
-    background: #111827;
-    color: #e5e7eb;
-    border-color: #4b5563;
-  }
+body.theme-dark .controls-form input[type="date"] {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
 
-  button {
-    border-color: #818cf8;
-    background: #6366f1;
-  }
+body.theme-dark button {
+  border-color: #818cf8;
+  background: #6366f1;
+}
 
-  button:hover {
-    background: #4f46e5;
-  }
+body.theme-dark button:hover {
+  background: #4f46e5;
+}
 
-  .range-button.active {
-    background: #4338ca;
-    border-color: #6366f1;
-  }
+body.theme-dark .range-button.active {
+  background: #4338ca;
+  border-color: #6366f1;
+}
 
-  .graph-cell,
-  .legend-cell {
-    border-color: rgba(148, 163, 184, 0.25);
-  }
+body.theme-dark .graph-cell,
+body.theme-dark .legend-cell {
+  border-color: rgba(148, 163, 184, 0.25);
+}
 
-  .graph-cell:hover {
-    border-color: rgba(226, 232, 240, 0.7);
-  }
+body.theme-dark .graph-cell:hover {
+  border-color: rgba(226, 232, 240, 0.7);
+}
 
-  .graph-tooltip {
-    background: rgba(2, 6, 23, 0.95);
-    color: #f8fafc;
-  }
+body.theme-dark .graph-tooltip {
+  background: rgba(2, 6, 23, 0.95);
+  color: #f8fafc;
+}
 
-  #sleep-graph .level-0,
-  #activity-graph .level-0,
-  #sedentary-graph .level-0,
-  #workout-graph .level-0,
-  #meditation-graph .level-0,
-  #stress-recovery-graph .level-0 {
-    background-color: #334155;
-  }
+body.theme-dark #sleep-graph .level-0,
+body.theme-dark #activity-graph .level-0,
+body.theme-dark #sedentary-graph .level-0,
+body.theme-dark #workout-graph .level-0,
+body.theme-dark #meditation-graph .level-0,
+body.theme-dark #stress-recovery-graph .level-0 {
+  background-color: #334155;
 }
 
 @media (max-width: 768px) {
