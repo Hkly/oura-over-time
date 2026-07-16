@@ -145,60 +145,36 @@ function toZScoreLevels(valueMap, dates) {
 }
 
 function toStressRecoveryBalanceLevels(stressRecoveryByDate, dates) {
-  const balances = dates
-    .map(date => stressRecoveryByDate[date]?.balance)
-    .filter(value => typeof value === 'number' && !Number.isNaN(value))
-    .sort((a, b) => a - b);
-
-  if (balances.length === 0) {
-    return dates.map(date => ({ date, level: 0, value: 0, stress: null, recovery: null, balance: null, bucket: null }));
-  }
-
-  const recoveryMagnitudes = balances
-    .filter(value => value > 0)
-    .map(value => Math.abs(value))
-    .sort((a, b) => a - b);
-  const stressMagnitudes = balances
-    .filter(value => value < 0)
-    .map(value => Math.abs(value))
-    .sort((a, b) => a - b);
-
-  function quantile(values, p) {
-    if (values.length === 0) return 0;
-    return values[Math.floor((values.length - 1) * p)];
-  }
-
-  const recoveryQ1 = quantile(recoveryMagnitudes, 1 / 3);
-  const recoveryQ2 = quantile(recoveryMagnitudes, 2 / 3);
-  const stressQ1 = quantile(stressMagnitudes, 1 / 3);
-  const stressQ2 = quantile(stressMagnitudes, 2 / 3);
-
   return dates.map(date => {
     const entry = stressRecoveryByDate[date];
     if (!entry) {
-      return { date, level: 0, value: 0, stress: null, recovery: null, balance: null, bucket: null };
+      return { date, level: 0, value: 0, stress: null, recovery: null, balance: null };
     }
 
-    const balance = entry.balance;
-    if (balance === 0) {
-      return { date, level: 4, value: balance, stress: entry.stress, recovery: entry.recovery, balance, bucket: 0 };
+    const stress = Number(entry.stress || 0);
+    const recovery = Number(entry.recovery || 0);
+    const balance = recovery - stress;
+
+    if (stress <= 0 && recovery <= 0) {
+      return { date, level: 0, value: 0, stress, recovery, balance };
     }
 
-    if (balance > 0) {
-      const magnitude = Math.abs(balance);
-      let bucket = 1;
-      if (magnitude > recoveryQ2) bucket = 3;
-      else if (magnitude > recoveryQ1) bucket = 2;
-      const level = bucket === 3 ? 1 : bucket === 2 ? 2 : 3;
-      return { date, level, value: balance, stress: entry.stress, recovery: entry.recovery, balance, bucket };
+    if (stress <= 0) {
+      return { date, level: 1, value: balance, stress, recovery, balance };
     }
 
-    const magnitude = Math.abs(balance);
-    let bucket = -1;
-    if (magnitude > stressQ2) bucket = -3;
-    else if (magnitude > stressQ1) bucket = -2;
-    const level = bucket === -3 ? 7 : bucket === -2 ? 6 : 5;
-    return { date, level, value: balance, stress: entry.stress, recovery: entry.recovery, balance, bucket };
+    if (recovery <= 0) {
+      return { date, level: 7, value: balance, stress, recovery, balance };
+    }
+
+    const ratio = (recovery - stress) / (recovery + stress);
+    let level = 4;
+    if (ratio >= 0.35) level = 2; // Recovery-dominant mixed
+    else if (ratio > 0.1) level = 3; // Recovery-leaning mixed
+    else if (ratio <= -0.35) level = 6; // Stress-dominant mixed
+    else if (ratio < -0.1) level = 5; // Stress-leaning mixed
+
+    return { date, level, value: balance, stress, recovery, balance };
   });
 }
 

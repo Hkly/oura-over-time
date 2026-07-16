@@ -283,13 +283,13 @@ button:hover {
 #meditation-graph .level-4 { background-color: #6b3a8c; }
 
 #stress-recovery-graph .level-0 { background-color: #ebedf0; }
-#stress-recovery-graph .level-1 { background-color: hsl(192, 72%, 40%); }
-#stress-recovery-graph .level-2 { background-color: hsl(192, 72%, 52%); }
-#stress-recovery-graph .level-3 { background-color: hsl(192, 72%, 66%); }
-#stress-recovery-graph .level-4 { background-color: #f3f4f6; }
-#stress-recovery-graph .level-5 { background-color: #ffb3b3; }
-#stress-recovery-graph .level-6 { background-color: #ff8c8c; }
-#stress-recovery-graph .level-7 { background-color: #ff6161; }
+#stress-recovery-graph .level-1 { background-color: hsl(202, 72%, 50%); } /* Recovery only */
+#stress-recovery-graph .level-2 { background-color: hsl(236, 64%, 58%); } /* Recovery-dominant mixed */
+#stress-recovery-graph .level-3 { background-color: hsl(262, 60%, 62%); } /* Recovery-leaning mixed */
+#stress-recovery-graph .level-4 { background-color: hsl(285, 42%, 56%); } /* Balanced mixed */
+#stress-recovery-graph .level-5 { background-color: hsl(318, 52%, 58%); } /* Stress-leaning mixed */
+#stress-recovery-graph .level-6 { background-color: hsl(338, 62%, 60%); } /* Stress-dominant mixed */
+#stress-recovery-graph .level-7 { background-color: hsl(352, 82%, 66%); } /* Stress only */
 
 .legend {
   display: flex;
