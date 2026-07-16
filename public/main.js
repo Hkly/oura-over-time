@@ -345,6 +345,13 @@ function formatInteger(value) {
   return new Intl.NumberFormat().format(Number(value || 0));
 }
 
+function formatCountWithUnit(value, singularUnit, pluralUnit) {
+  const number = Number(value || 0);
+  const absolute = Math.abs(number);
+  const unit = absolute === 1 ? singularUnit : pluralUnit;
+  return `${new Intl.NumberFormat().format(number)} ${unit}`;
+}
+
 function formatSecondsAsDuration(value) {
   const seconds = Number(value || 0);
   const totalMinutes = Math.round(Math.abs(seconds) / 60);
@@ -368,16 +375,15 @@ function buildLegendRangeTooltips(metricData, levels, valueFormatter, labels = {
   });
 
   return levels.map(level => {
-    const label = labels[level] || (level === 0 ? zeroLabel : `Range ${level}`);
     const values = valuesByLevel.get(level) || [];
     const dayCount = values.length;
 
     if (level === 0) {
-      return `${label} · ${dayCount} days`;
+      return `${zeroLabel}${dayCount > 0 ? ` · ${dayCount} days` : ''}`;
     }
 
     if (dayCount === 0) {
-      return `${label} · 0 days`;
+      return '0 days';
     }
 
     const minValue = Math.min(...values);
@@ -385,7 +391,7 @@ function buildLegendRangeTooltips(metricData, levels, valueFormatter, labels = {
     const formattedMin = valueFormatter(minValue);
     const formattedMax = valueFormatter(maxValue);
     const rangeText = minValue === maxValue ? formattedMin : `${formattedMin} - ${formattedMax}`;
-    return `${label} · ${dayCount} days · ${rangeText}`;
+    return `${dayCount} days · ${rangeText}`;
   });
 }
 
@@ -1011,7 +1017,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tooltips: buildLegendRangeTooltips(
               activityLevelData,
               [0, 1, 2, 3, 4],
-              formatInteger,
+              function(value) {
+                return formatCountWithUnit(value, 'step', 'steps');
+              },
               {},
               'No step data'
             )
@@ -1074,7 +1082,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tooltips: buildLegendRangeTooltips(
               meditationLevelData,
               [0, 1, 2, 3, 4],
-              formatInteger,
+              function(value) {
+                return formatCountWithUnit(value, 'minute', 'minutes');
+              },
               {},
               'No meditation sessions'
             )
@@ -1095,7 +1105,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tooltips: buildLegendRangeTooltips(
               workoutLevelData,
               [0, 1, 2, 3, 4],
-              formatInteger,
+              function(value) {
+                return formatCountWithUnit(value, 'minute', 'minutes');
+              },
               {},
               'No workouts'
             )
