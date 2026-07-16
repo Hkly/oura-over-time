@@ -392,6 +392,91 @@ footer {
   border-top: 1px solid #e2e8f0;
 }
 
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #e5e7eb;
+  }
+
+  .container {
+    background: #111827;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .controls-section,
+  .metric-panel,
+  .secondary-visual,
+  .contribution-graph,
+  footer {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .dashboard-section__title,
+  .metric-panel__title {
+    color: #f3f4f6;
+  }
+
+  .dashboard-section__description,
+  .metric-panel__description,
+  .auth-status,
+  .result,
+  footer,
+  .month-label,
+  .weekday-label,
+  .legend,
+  .clock-summary {
+    color: #cbd5e1;
+  }
+
+  .controls-form label {
+    color: #cbd5e1;
+  }
+
+  .controls-form input[type="date"] {
+    background: #111827;
+    color: #e5e7eb;
+    border-color: #4b5563;
+  }
+
+  button {
+    border-color: #818cf8;
+    background: #6366f1;
+  }
+
+  button:hover {
+    background: #4f46e5;
+  }
+
+  .range-button.active {
+    background: #4338ca;
+    border-color: #6366f1;
+  }
+
+  .graph-cell,
+  .legend-cell {
+    border-color: rgba(148, 163, 184, 0.25);
+  }
+
+  .graph-cell:hover {
+    border-color: rgba(226, 232, 240, 0.7);
+  }
+
+  .graph-tooltip {
+    background: rgba(2, 6, 23, 0.95);
+    color: #f8fafc;
+  }
+
+  #sleep-graph .level-0,
+  #activity-graph .level-0,
+  #sedentary-graph .level-0,
+  #workout-graph .level-0,
+  #meditation-graph .level-0,
+  #stress-recovery-graph .level-0 {
+    background-color: #334155;
+  }
+}
+
 @media (max-width: 768px) {
   header h1 {
     font-size: 2em;
