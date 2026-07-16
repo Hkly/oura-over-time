@@ -826,28 +826,60 @@ function getCacheKey() {
   return 'oura-dashboard-daily-cache';
 }
 
+const CACHE_VERSION = 2;
+let memoryDailyCache = null;
+
 function saveDailyCache(start, end, data) {
   const payload = {
+    cacheVersion: CACHE_VERSION,
     cacheDate: getLocalDateString(),
     rangeKey: formatRangeKey(start, end),
     start,
     end,
     data
   };
-  localStorage.setItem(getCacheKey(), JSON.stringify(payload));
+  memoryDailyCache = payload;
+
+  try {
+    localStorage.setItem(getCacheKey(), JSON.stringify(payload));
+  } catch (error) {
+    // Avoid reusing stale cache when writing updated payloads fails.
+    localStorage.removeItem(getCacheKey());
+    try {
+      localStorage.setItem(getCacheKey(), JSON.stringify(payload));
+    } catch (secondError) {
+      console.warn('Unable to persist Oura dashboard cache:', secondError);
+    }
+  }
 }
 
 function loadDailyCache() {
+  const currentDate = getLocalDateString();
+  if (
+    memoryDailyCache &&
+    memoryDailyCache.cacheVersion === CACHE_VERSION &&
+    memoryDailyCache.cacheDate === currentDate &&
+    memoryDailyCache.data
+  ) {
+    return memoryDailyCache;
+  }
+  memoryDailyCache = null;
+
   const raw = localStorage.getItem(getCacheKey());
   if (!raw) return null;
 
   try {
     const payload = JSON.parse(raw);
-    if (payload?.cacheDate !== getLocalDateString()) {
+    if (payload?.cacheVersion !== CACHE_VERSION) {
+      localStorage.removeItem(getCacheKey());
+      return null;
+    }
+    if (payload?.cacheDate !== currentDate) {
       localStorage.removeItem(getCacheKey());
       return null;
     }
     if (!payload?.data) return null;
+    memoryDailyCache = payload;
     return payload;
   } catch (error) {
     localStorage.removeItem(getCacheKey());
