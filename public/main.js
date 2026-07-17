@@ -151,12 +151,33 @@ const MET_BUCKET_LABELS = {
   low: 'low activity',
   sedentary: 'sedentary'
 };
-const MET_BUCKET_BASE_HSL = {
-  high: { h: 12, s: 84 },
-  medium: { h: 268, s: 72 },
-  low: { h: 204, s: 70 },
-  sedentary: { h: 214, s: 24 }
-};
+
+function readCssNumberVar(name, fallback) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getMetCompositionBaseHsl() {
+  return {
+    high: {
+      h: readCssNumberVar('--met-high-hue', 12),
+      s: readCssNumberVar('--met-high-saturation', 84)
+    },
+    medium: {
+      h: readCssNumberVar('--met-medium-hue', 268),
+      s: readCssNumberVar('--met-medium-saturation', 72)
+    },
+    low: {
+      h: readCssNumberVar('--met-low-hue', 204),
+      s: readCssNumberVar('--met-low-saturation', 70)
+    },
+    sedentary: {
+      h: readCssNumberVar('--met-sedentary-hue', 214),
+      s: readCssNumberVar('--met-sedentary-saturation', 24)
+    }
+  };
+}
 
 function toMetCompositionLevels(metBucketsByDate, dates) {
   const totals = dates.map(date => Number(metBucketsByDate[date]?.total || 0));
@@ -210,7 +231,8 @@ function getMetCompositionColor(day) {
   if (!day || day.level === 0 || !day.dominantKey) {
     return null;
   }
-  const base = MET_BUCKET_BASE_HSL[day.dominantKey] || MET_BUCKET_BASE_HSL.low;
+  const metBaseByBucket = getMetCompositionBaseHsl();
+  const base = metBaseByBucket[day.dominantKey] || metBaseByBucket.low;
   const dominanceRatio = Math.max(0, Math.min(1, Number(day.dominanceRatio || 0)));
   const loadRatio = Math.max(0, Math.min(1, Number(day.loadRatio || 0)));
   const saturation = Math.round(base.s * (0.45 + dominanceRatio * 0.55));
@@ -1194,13 +1216,6 @@ document.addEventListener('DOMContentLoaded', function() {
           legendOptions: {
             startLabel: 'Mix',
             endLabel: 'Load',
-            colors: [
-              '#ebedf0',
-              'hsl(214, 20%, 56%)',
-              'hsl(204, 58%, 52%)',
-              'hsl(268, 58%, 50%)',
-              'hsl(12, 72%, 50%)'
-            ],
             tooltips: [
               'No MET data',
               'Sedentary-dominant days. Darker = higher total MET-minutes; richer color = clearer dominance.',

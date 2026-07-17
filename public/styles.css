@@ -4,6 +4,17 @@
   box-sizing: border-box;
 }
 
+:root {
+  --met-high-hue: 12;
+  --met-high-saturation: 84;
+  --met-medium-hue: 268;
+  --met-medium-saturation: 72;
+  --met-low-hue: 204;
+  --met-low-saturation: 70;
+  --met-sedentary-hue: 214;
+  --met-sedentary-saturation: 24;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -282,10 +293,10 @@ button:hover {
 #activity-graph .level-4 { background-color: #196127; }
 
 #activity-met-graph .level-0 { background-color: #ebedf0; }
-#activity-met-graph .level-1 { background-color: #d9f3f0; }
-#activity-met-graph .level-2 { background-color: #9fded7; }
-#activity-met-graph .level-3 { background-color: #4cb6b2; }
-#activity-met-graph .level-4 { background-color: #217a86; }
+#activity-met-graph .level-1 { background-color: hsl(var(--met-sedentary-hue), 20%, 56%); }
+#activity-met-graph .level-2 { background-color: hsl(var(--met-low-hue), 58%, 52%); }
+#activity-met-graph .level-3 { background-color: hsl(var(--met-medium-hue), 58%, 50%); }
+#activity-met-graph .level-4 { background-color: hsl(var(--met-high-hue), 72%, 50%); }
 
 #sedentary-graph .level-0 { background-color: #ebedf0; }
 #sedentary-graph .level-1 { background-color: #ffe8e1; }
