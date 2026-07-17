@@ -159,6 +159,12 @@ class OuraDataFetcher {
     return activity.map(d => ({
       date: d.day,
       steps: d.steps,
+      average_met_minutes: d.average_met_minutes,
+      high_activity_met_minutes: d.high_activity_met_minutes,
+      medium_activity_met_minutes: d.medium_activity_met_minutes,
+      low_activity_met_minutes: d.low_activity_met_minutes,
+      sedentary_met_minutes: d.sedentary_met_minutes,
+      met: d.met,
       active_calories: d.active_calories,
       high_activity_time: d.high_activity_time,
       low_activity_time: d.low_activity_time,

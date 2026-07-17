@@ -144,6 +144,80 @@ function toZScoreLevels(valueMap, dates) {
   });
 }
 
+const MET_BUCKET_ORDER = ['high', 'medium', 'low', 'sedentary'];
+const MET_BUCKET_LABELS = {
+  high: 'high activity',
+  medium: 'medium activity',
+  low: 'low activity',
+  sedentary: 'sedentary'
+};
+const MET_BUCKET_BASE_HSL = {
+  high: { h: 12, s: 84 },
+  medium: { h: 268, s: 72 },
+  low: { h: 204, s: 70 },
+  sedentary: { h: 214, s: 24 }
+};
+
+function toMetCompositionLevels(metBucketsByDate, dates) {
+  const totals = dates.map(date => Number(metBucketsByDate[date]?.total || 0));
+  const nonZeroTotals = totals.filter(value => value > 0);
+  const maxTotal = nonZeroTotals.length > 0 ? Math.max(...nonZeroTotals) : 0;
+
+  return dates.map(date => {
+    const buckets = metBucketsByDate[date];
+    const total = Number(buckets?.total || 0);
+    if (!buckets || total <= 0) {
+      return {
+        date,
+        level: 0,
+        value: 0,
+        buckets: null,
+        dominantKey: null,
+        dominanceRatio: 0,
+        loadRatio: 0
+      };
+    }
+
+    const normalizedBuckets = {
+      high: Number(buckets.high || 0),
+      medium: Number(buckets.medium || 0),
+      low: Number(buckets.low || 0),
+      sedentary: Number(buckets.sedentary || 0)
+    };
+
+    const rankedBuckets = MET_BUCKET_ORDER
+      .map(key => ({ key, value: normalizedBuckets[key] }))
+      .sort((a, b) => b.value - a.value || MET_BUCKET_ORDER.indexOf(a.key) - MET_BUCKET_ORDER.indexOf(b.key));
+    const dominantKey = rankedBuckets[0]?.key || 'low';
+    const dominantValue = rankedBuckets[0]?.value || 0;
+    const secondValue = rankedBuckets[1]?.value || 0;
+    const dominanceRatio = total > 0 ? (dominantValue - secondValue) / total : 0;
+    const loadRatio = maxTotal > 0 ? total / maxTotal : 0;
+
+    return {
+      date,
+      level: 1,
+      value: total,
+      buckets: normalizedBuckets,
+      dominantKey,
+      dominanceRatio,
+      loadRatio
+    };
+  });
+}
+
+function getMetCompositionColor(day) {
+  if (!day || day.level === 0 || !day.dominantKey) {
+    return null;
+  }
+  const base = MET_BUCKET_BASE_HSL[day.dominantKey] || MET_BUCKET_BASE_HSL.low;
+  const dominanceRatio = Math.max(0, Math.min(1, Number(day.dominanceRatio || 0)));
+  const loadRatio = Math.max(0, Math.min(1, Number(day.loadRatio || 0)));
+  const saturation = Math.round(base.s * (0.45 + dominanceRatio * 0.55));
+  const lightness = Math.round(74 - loadRatio * 32);
+  return `hsl(${base.h}, ${saturation}%, ${lightness}%)`;
+}
+
 function toStressRecoveryBalanceLevels(stressRecoveryByDate, dates) {
   return dates.map(date => {
     const entry = stressRecoveryByDate[date];
@@ -182,6 +256,7 @@ function buildMetricMaps(combinedRows, sessionRows) {
   const sleepSecondsByDate = {};
   const stepsByDate = {};
   const sedentarySecondsByDate = {};
+  const metBucketsByDate = {};
   const meditationMinutesByDate = {};
   const stressRecoveryByDate = {};
   const workoutMinutesByDate = {};
@@ -195,6 +270,20 @@ function buildMetricMaps(combinedRows, sessionRows) {
     if (meditationMinutesByDate[row.date] === undefined) {
       meditationMinutesByDate[row.date] = 0;
     }
+
+    const highMetMinutes = Number(row.high_activity_met_minutes || 0);
+    const mediumMetMinutes = Number(row.medium_activity_met_minutes || 0);
+    const lowMetMinutes = Number(row.low_activity_met_minutes || 0);
+    const sedentaryMetMinutes = Number(row.sedentary_met_minutes || 0);
+    const totalMetMinutes = highMetMinutes + mediumMetMinutes + lowMetMinutes + sedentaryMetMinutes;
+
+    metBucketsByDate[row.date] = {
+      high: highMetMinutes,
+      medium: mediumMetMinutes,
+      low: lowMetMinutes,
+      sedentary: sedentaryMetMinutes,
+      total: totalMetMinutes
+    };
 
     const hasStress = row.stress_high !== null && row.stress_high !== undefined && row.stress_high !== '';
     const hasRecovery = row.recovery_high !== null && row.recovery_high !== undefined && row.recovery_high !== '';
@@ -223,6 +312,7 @@ function buildMetricMaps(combinedRows, sessionRows) {
     sleepSecondsByDate,
     stepsByDate,
     sedentarySecondsByDate,
+    metBucketsByDate,
     meditationMinutesByDate,
     stressRecoveryByDate,
     workoutMinutesByDate,
@@ -1017,16 +1107,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const sleepContainer = document.getElementById('sleep-graph');
     const activityContainer = document.getElementById('activity-graph');
+    const activityMetContainer = document.getElementById('activity-met-graph');
     const sedentaryContainer = document.getElementById('sedentary-graph');
     const stressRecoveryContainer = document.getElementById('stress-recovery-graph');
     const meditationContainer = document.getElementById('meditation-graph');
     const workoutContainer = document.getElementById('workout-graph');
-    if (sleepContainer && activityContainer && sedentaryContainer && stressRecoveryContainer && meditationContainer && workoutContainer) {
+    if (sleepContainer && activityContainer && activityMetContainer && sedentaryContainer && stressRecoveryContainer && meditationContainer && workoutContainer) {
       const dates = getDateRange(start, end);
       const maps = buildMetricMaps(filteredCombinedRows, filteredSessionRows);
       addWorkoutMetrics(filteredWorkoutRows, maps.workoutMinutesByDate, maps.workoutTypeCountsByDate);
       const sleepLevelData = toZScoreLevels(maps.sleepSecondsByDate, dates);
       const activityLevelData = toZScoreLevels(maps.stepsByDate, dates);
+      const activityMetLevelData = toMetCompositionLevels(maps.metBucketsByDate, dates);
       const sedentaryLevelData = toSedentaryThresholdLevels(maps.sedentarySecondsByDate, dates);
       const stressRecoveryLevelData = toStressRecoveryBalanceLevels(maps.stressRecoveryByDate, dates);
       const meditationLevelData = toZScoreLevels(maps.meditationMinutesByDate, dates);
@@ -1066,6 +1158,56 @@ document.addEventListener('DOMContentLoaded', function() {
               {},
               'No step data'
             )
+          }
+        }
+      );
+      createContributionGraph(
+        'activity-met-graph',
+        'Daily MET load:',
+        activityMetLevelData,
+        function(value) {
+          return formatCountWithUnit(value, 'MET-minute', 'MET-minutes');
+        },
+        {
+          cellColorBuilder: getMetCompositionColor,
+          tooltipTextBuilder: function(day) {
+            if (!day.buckets) {
+              return `${day.date}: No MET data`;
+            }
+            const total = Number(day.value || 0);
+            const buckets = day.buckets;
+            const dominantLabel = MET_BUCKET_LABELS[day.dominantKey] || day.dominantKey;
+            const percent = function(bucketValue) {
+              if (total <= 0) return '0%';
+              return `${Math.round((bucketValue / total) * 100)}%`;
+            };
+            return [
+              day.date,
+              `Total: ${formatCountWithUnit(total, 'MET-minute', 'MET-minutes')}`,
+              `Dominant: ${dominantLabel}`,
+              `High: ${percent(buckets.high)}`,
+              `Medium: ${percent(buckets.medium)}`,
+              `Low: ${percent(buckets.low)}`,
+              `Sedentary: ${percent(buckets.sedentary)}`
+            ].join('\n');
+          },
+          legendOptions: {
+            startLabel: 'Mix',
+            endLabel: 'Load',
+            colors: [
+              '#ebedf0',
+              'hsl(214, 20%, 56%)',
+              'hsl(204, 58%, 52%)',
+              'hsl(268, 58%, 50%)',
+              'hsl(12, 72%, 50%)'
+            ],
+            tooltips: [
+              'No MET data',
+              'Sedentary-dominant days. Darker = higher total MET-minutes; richer color = clearer dominance.',
+              'Low-activity-dominant days. Darker = higher total MET-minutes; richer color = clearer dominance.',
+              'Medium-activity-dominant days. Darker = higher total MET-minutes; richer color = clearer dominance.',
+              'High-activity-dominant days. Darker = higher total MET-minutes; richer color = clearer dominance.'
+            ]
           }
         }
       );

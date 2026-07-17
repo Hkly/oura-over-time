@@ -42,6 +42,7 @@ Start the app and click **Authorize Oura** in the UI.
 - **Sleep duration:** z-score / standard deviation bands
 - **Sleep timing clock:** circular density by time-of-day frequency
 - **Steps:** z-score / standard deviation bands
+- **Daily MET load:** composition heatmap (hue = dominant MET bucket, saturation = dominance strength, lightness = total MET load)
 - **Sedentary time:** fixed thresholds (`0-5h`, `5-7h`, `7-9h`, `9h+`)
 - **Workout minutes:** z-score / standard deviation bands
 - **Stress vs recovery:** signed side-specific tertile buckets (3 recovery + neutral + 3 stress)

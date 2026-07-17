@@ -265,7 +265,7 @@ button:hover {
   line-height: 1.2;
   pointer-events: none;
   max-width: min(320px, calc(100vw - 16px));
-  white-space: normal;
+  white-space: pre-line;
   word-break: break-word;
 }
 
@@ -280,6 +280,12 @@ button:hover {
 #activity-graph .level-2 { background-color: #7bc96f; }
 #activity-graph .level-3 { background-color: #239a3b; }
 #activity-graph .level-4 { background-color: #196127; }
+
+#activity-met-graph .level-0 { background-color: #ebedf0; }
+#activity-met-graph .level-1 { background-color: #d9f3f0; }
+#activity-met-graph .level-2 { background-color: #9fded7; }
+#activity-met-graph .level-3 { background-color: #4cb6b2; }
+#activity-met-graph .level-4 { background-color: #217a86; }
 
 #sedentary-graph .level-0 { background-color: #ebedf0; }
 #sedentary-graph .level-1 { background-color: #ffe8e1; }
@@ -485,6 +491,7 @@ body.theme-dark .graph-tooltip {
 
 body.theme-dark #sleep-graph .level-0,
 body.theme-dark #activity-graph .level-0,
+body.theme-dark #activity-met-graph .level-0,
 body.theme-dark #sedentary-graph .level-0,
 body.theme-dark #workout-graph .level-0,
 body.theme-dark #meditation-graph .level-0,
