@@ -1060,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function setAuthStatus(isAuthorized) {
     authStatusEl.textContent = isAuthorized
       ? 'Authorized: ready to fetch data.'
-      : 'Not authorized: click "Authorize Oura" or set OURA_ACCESS_TOKEN on the server.';
+      : 'Not authorized: click "Authorize Oura" for this browser session.';
   }
 
   function setActiveRangeButton(preset) {

@@ -4,7 +4,6 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
-const fs = require('fs');
 const { fetchAndSaveOuraData } = require('./OuraDataService');
 
 const app = express();
@@ -12,14 +11,54 @@ const PORT = process.env.PORT || 3000;
 const OURA_AUTH_BASE_URL = 'https://cloud.ouraring.com/oauth/authorize';
 const OURA_TOKEN_URL = 'https://api.ouraring.com/oauth/token';
 const OURA_SCOPES = 'daily session workout';
-const oauthStates = new Set();
-let runtimeAccessToken = null;
+const SESSION_COOKIE_NAME = 'oura_session_id';
+const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const oauthStates = new Map(); // state -> session id
+const sessionStore = new Map(); // session id -> { accessToken, latestData, updatedAt }
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-function getConfiguredAccessToken() {
-  return runtimeAccessToken || process.env.OURA_ACCESS_TOKEN || null;
+function parseCookies(cookieHeader) {
+  if (!cookieHeader) return {};
+  return cookieHeader
+    .split(';')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .reduce((cookies, part) => {
+      const separatorIndex = part.indexOf('=');
+      if (separatorIndex === -1) return cookies;
+      const key = part.slice(0, separatorIndex).trim();
+      const value = decodeURIComponent(part.slice(separatorIndex + 1).trim());
+      cookies[key] = value;
+      return cookies;
+    }, {});
+}
+
+function getOrCreateSessionId(req, res) {
+  const cookies = parseCookies(req.headers.cookie);
+  const existingSessionId = cookies[SESSION_COOKIE_NAME];
+  if (existingSessionId && sessionStore.has(existingSessionId)) {
+    return existingSessionId;
+  }
+
+  const sessionId = crypto.randomBytes(24).toString('hex');
+  sessionStore.set(sessionId, {
+    accessToken: null,
+    latestData: null,
+    updatedAt: Date.now()
+  });
+
+  res.append('Set-Cookie', `${SESSION_COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_COOKIE_MAX_AGE_SECONDS}`);
+  return sessionId;
+}
+
+function getSessionById(sessionId) {
+  return sessionStore.get(sessionId) || null;
+}
+
+function getSessionAccessToken(sessionId) {
+  return getSessionById(sessionId)?.accessToken || null;
 }
 
 function getRedirectUri() {
@@ -36,40 +75,26 @@ function requireOAuthConfiguration() {
   return { clientId, clientSecret, redirectUri };
 }
 
-function readJsonFileIfExists(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-  return fs.readFileSync(filePath, 'utf8');
-}
-
 app.get('/auth/status', (req, res) => {
-  res.json({ authorized: Boolean(getConfiguredAccessToken()) });
+  const sessionId = getOrCreateSessionId(req, res);
+  res.json({ authorized: Boolean(getSessionAccessToken(sessionId)) });
 });
 
 app.get('/data/latest', (req, res) => {
-  const outputDir = path.join(__dirname, 'output');
-  const combined = readJsonFileIfExists(path.join(outputDir, 'oura_combined_raw.json'));
-  const sessions = readJsonFileIfExists(path.join(outputDir, 'oura_sessions.json'));
-  const workouts = readJsonFileIfExists(path.join(outputDir, 'oura_workouts.json'));
-
-  if (!combined || !sessions || !workouts) {
+  const sessionId = getOrCreateSessionId(req, res);
+  const sessionData = getSessionById(sessionId);
+  if (!sessionData?.latestData) {
     return res.json({ success: false, error: 'No saved dataset found yet.' });
   }
 
   return res.json({
     success: true,
-    data: {
-      combined,
-      individual: {
-        sessions,
-        workouts
-      }
-    }
+    data: sessionData.latestData
   });
 });
 
 app.get('/auth/start', (req, res) => {
+  const sessionId = getOrCreateSessionId(req, res);
   const oauthConfig = requireOAuthConfiguration();
   if (!oauthConfig) {
     return res.status(500).json({
@@ -79,7 +104,7 @@ app.get('/auth/start', (req, res) => {
   }
 
   const state = crypto.randomBytes(24).toString('hex');
-  oauthStates.add(state);
+  oauthStates.set(state, sessionId);
 
   const authorizationUrl = new URL(OURA_AUTH_BASE_URL);
   authorizationUrl.searchParams.set('client_id', oauthConfig.clientId);
@@ -92,6 +117,7 @@ app.get('/auth/start', (req, res) => {
 });
 
 app.get('/auth/callback', async (req, res) => {
+  const sessionId = getOrCreateSessionId(req, res);
   const oauthConfig = requireOAuthConfiguration();
   if (!oauthConfig) {
     return res.redirect('/?auth=error&message=OAuth+is+not+configured');
@@ -101,10 +127,11 @@ app.get('/auth/callback', async (req, res) => {
   if (error) {
     return res.redirect(`/?auth=error&message=${encodeURIComponent(String(error))}`);
   }
-  if (!code || !state || !oauthStates.has(state)) {
+  const expectedSessionId = oauthStates.get(String(state));
+  if (!code || !state || !expectedSessionId || expectedSessionId !== sessionId) {
     return res.redirect('/?auth=error&message=Invalid+OAuth+callback+state');
   }
-  oauthStates.delete(state);
+  oauthStates.delete(String(state));
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -130,7 +157,12 @@ app.get('/auth/callback', async (req, res) => {
       throw new Error('OAuth token exchange did not return access_token.');
     }
 
-    runtimeAccessToken = tokenPayload.access_token;
+    const session = getSessionById(sessionId);
+    if (!session) {
+      return res.redirect('/?auth=error&message=Session+not+found');
+    }
+    session.accessToken = tokenPayload.access_token;
+    session.updatedAt = Date.now();
     return res.redirect('/?auth=success');
   } catch (exchangeError) {
     console.error('[ERROR] OAuth callback:', exchangeError);
@@ -139,19 +171,25 @@ app.get('/auth/callback', async (req, res) => {
 });
 
 app.post('/fetch', async (req, res) => {
+  const sessionId = getOrCreateSessionId(req, res);
   const { start, end, format } = req.body;
   if (!start || !end || !format) {
     return res.json({ success: false, error: 'Missing required fields.' });
   }
-  const accessToken = getConfiguredAccessToken();
+  const accessToken = getSessionAccessToken(sessionId);
   if (!accessToken) {
     return res.json({
       success: false,
-      error: 'Auth is not configured. Set OURA_ACCESS_TOKEN or authorize via /auth/start.'
+      error: 'Auth is not configured for this browser session. Authorize via /auth/start.'
     });
   }
   try {
     const data = await fetchAndSaveOuraData({ accessToken, startDate: start, endDate: end, format });
+    const session = getSessionById(sessionId);
+    if (session) {
+      session.latestData = data;
+      session.updatedAt = Date.now();
+    }
     res.json({ success: true, data });
   } catch (error) {
     console.error('[ERROR] fetchAndSaveOuraData:', error);

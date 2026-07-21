@@ -25,6 +25,7 @@ export OURA_REDIRECT_URI="http://localhost:3000/auth/callback"
 
 OAuth authorization requests these scopes: `daily session workout`.
 Start the app and click **Authorize Oura** in the UI.
+OAuth tokens are scoped to the current browser session/device (not shared globally across all clients).
 
 ## Development setup
 1. Install dependencies:
